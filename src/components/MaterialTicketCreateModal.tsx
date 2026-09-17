@@ -14,11 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
-import {
-  parseMaterialQr,
-  SAMPLE_MATERIAL_QRS,
-  SAMPLE_WAREHOUSE_LOCATIONS,
-} from '../utils/materialQrParser';
+import { parseMaterialQr } from '../utils/materialQrParser';
 import { ScanErrorInfo } from './ScanErrorModal';
 
 interface MaterialTicketCreateModalProps {
@@ -286,46 +282,37 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                 </button>
               </div>
 
-              {/* Sample QR chips */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Thử nhanh:</span>
-                {SAMPLE_MATERIAL_QRS.slice(0, 2).map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => applyQrString(s.raw)}
-                    className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500 font-medium"
-                  >
-                    {s.label}
-                  </button>
-                ))}
-                {isParsed ? (
-                  <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    <CheckCircle2 className="h-3 w-3" /> Đã bóc tách 6 trường
-                  </span>
-                ) : rawQr ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const parsed = parseMaterialQr(rawQr);
-                      if (onShowScanError) {
-                        onShowScanError({
-                          type: 'invalid_format',
-                          title: 'Mã QR không đúng quy chuẩn',
-                          message:
-                            parsed.errorReason ||
-                            'Mã QR không đủ 6 trường thông tin quy chuẩn của Liên Châu.',
-                          rawQr,
-                          parsed,
-                        });
-                      }
-                    }}
-                    className="ml-auto inline-flex items-center gap-1 text-[10px] text-rose-600 dark:text-rose-400 font-bold hover:underline"
-                  >
-                    <AlertTriangle className="h-3 w-3" /> Lỗi định dạng (Xem chi tiết)
-                  </button>
-                ) : null}
-              </div>
+              {/* Status bóc tách nếu có QR */}
+              {rawQr && (
+                <div className="flex items-center justify-end pt-0.5">
+                  {isParsed ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      <CheckCircle2 className="h-3 w-3" /> Đã bóc tách 6 trường
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parsed = parseMaterialQr(rawQr);
+                        if (onShowScanError) {
+                          onShowScanError({
+                            type: 'invalid_format',
+                            title: 'Mã QR không đúng quy chuẩn',
+                            message:
+                              parsed.errorReason ||
+                              'Mã QR không đủ 6 trường thông tin quy chuẩn của Liên Châu.',
+                            rawQr,
+                            parsed,
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] text-rose-600 dark:text-rose-400 font-bold hover:underline"
+                    >
+                      <AlertTriangle className="h-3 w-3" /> Lỗi định dạng (Xem chi tiết)
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 2. 6 TRƯỜNG BÓC TÁCH */}
@@ -471,23 +458,6 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     onChange={(e) => setUnit(e.target.value)}
                     className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
-                  {/* Quick unit chips */}
-                  <div className="flex items-center gap-1 flex-wrap mt-1">
-                    {['Cuộn', 'Mét', 'Kg', 'Cái'].map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        onClick={() => setUnit(u)}
-                        className={`text-[9px] px-1.5 py-0.5 rounded ${
-                          unit === u
-                            ? 'bg-emerald-600 text-white font-bold'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div>
@@ -529,50 +499,6 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                       +
                     </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Vị trí kho: quét hoặc điền */}
-              <div>
-                <label
-                  htmlFor="input-warehouse-location"
-                  className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
-                >
-                  Vị trí kho (location) <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id="input-warehouse-location"
-                    type="text"
-                    required
-                    value={warehouseLocation}
-                    onChange={(e) => setWarehouseLocation(e.target.value)}
-                    placeholder="VD: A1-02"
-                    className="flex-1 h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  />
-                  <button
-                    id="btn-scan-location-qr"
-                    type="button"
-                    onClick={onOpenLocationScanner}
-                    className="h-9 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shrink-0"
-                  >
-                    <Camera className="h-3.5 w-3.5" />
-                    <span>Quét</span>
-                  </button>
-                </div>
-
-                {/* Sample locations */}
-                <div className="flex items-center gap-1 flex-wrap mt-1">
-                  {SAMPLE_WAREHOUSE_LOCATIONS.slice(0, 2).map((loc, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setWarehouseLocation(loc.code)}
-                      className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
-                    >
-                      {loc.code}
-                    </button>
-                  ))}
                 </div>
               </div>
 

@@ -13,6 +13,7 @@ import {
   AlertCircle,
   FileImage,
   MapPin,
+  Edit3,
 } from 'lucide-react';
 import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
 import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
@@ -28,6 +29,7 @@ interface DirectCameraModalProps {
   scannerTarget?: 'location' | 'material';
   currentLocation?: string | null;
   onSwitchLocation?: () => void;
+  onManualEntry?: () => void;
   samples?: { label: string; description?: string; desc?: string; raw?: string; code?: string }[];
 }
 
@@ -41,6 +43,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   scannerTarget = 'material',
   currentLocation,
   onSwitchLocation,
+  onManualEntry,
   samples,
 }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -563,6 +566,23 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                     <span>Đổi vị trí</span>
                   </button>
                 )}
+
+                {onManualEntry && (
+                  <button
+                    id="btn-scanner-manual-entry"
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      onManualEntry();
+                      onClose();
+                    }}
+                    className="px-2.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-[11px] font-semibold text-slate-200 hover:text-emerald-300 backdrop-blur-md shadow-md transition-colors flex items-center gap-1"
+                    title="Tự điền thông tin vật tư thủ công"
+                  >
+                    <Edit3 className="h-3 w-3 text-emerald-400" />
+                    <span>Tự điền</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -581,18 +601,36 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-slate-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Rê vào mã QR để tự động quét & ẩn form quét</span>
+                <span>Rê vào mã QR để tự động quét</span>
               </div>
 
-              <button
-                id="btn-toggle-sample-list"
-                type="button"
-                onClick={() => setShowSamplePicker((prev) => !prev)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-              >
-                <Sparkles className="h-3 w-3" />
-                <span>{showSamplePicker ? 'Đóng' : 'Mẫu thử'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {scannerTarget === 'material' && onManualEntry && (
+                  <button
+                    id="btn-footer-manual-entry"
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      onManualEntry();
+                      onClose();
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-800 transition-colors"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    <span>Tự điền</span>
+                  </button>
+                )}
+
+                <button
+                  id="btn-toggle-sample-list"
+                  type="button"
+                  onClick={() => setShowSamplePicker((prev) => !prev)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>{showSamplePicker ? 'Đóng' : 'Mẫu thử'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Expandable Sample QRs for quick testing */}

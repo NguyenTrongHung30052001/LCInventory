@@ -3,10 +3,40 @@ import path from 'path';
 import http from 'http';
 import { createServer as createViteServer } from 'vite';
 
+// Persistent keep-alive agent to reuse TCP sockets and avoid handshake latency
+const mesAgent = new http.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 60000,
+  maxSockets: 64,
+  maxFreeSockets: 32,
+  timeout: 8000,
+});
+
+// Fast DNS cache: cache resolved IP to avoid thread-pool dns.lookup latency
+let cachedHost = '113.161.240.40'; // Verified direct IP for mes.lienchau.vn
+
+// In-memory cache for GET inventory requests with fast invalidation on mutations
+interface CacheEntry {
+  data: any;
+  status: number;
+  timestamp: number;
+}
+const inventoryCache = new Map<string, CacheEntry>();
+const inFlightRequests = new Map<string, Promise<{ status: number; text: string; data: any }>>();
+const CACHE_TTL_MS = 6000; // 6 seconds cache for instant response
+
+function invalidateInventoryCache(scannedBy?: string) {
+  if (scannedBy) {
+    inventoryCache.delete(scannedBy);
+  } else {
+    inventoryCache.clear();
+  }
+}
+
 /**
- * Utility helper to communicate directly with MES Server (http://mes.lienchau.vn:5092)
- * using Node's standard `http` module to avoid dual-stack/undici ECONNREFUSED issues.
- * Automatically falls back to direct IP 113.161.240.40 if DNS lookup fails.
+ * High-performance helper to communicate with MES Server (http://mes.lienchau.vn:5092)
+ * Uses persistent TCP connection pooling (keep-alive) and direct IP routing
+ * to achieve sub-100ms response times.
  */
 function requestMesServer(
   targetPath: string,
@@ -26,6 +56,7 @@ function requestMesServer(
       const headers: Record<string, string | number> = {
         Host: 'mes.lienchau.vn:5092',
         Accept: 'application/json',
+        Connection: 'keep-alive',
       };
 
       if (postData != null) {
@@ -40,7 +71,8 @@ function requestMesServer(
           path: targetPath,
           method: method,
           headers: headers,
-          timeout: 12000,
+          agent: mesAgent,
+          timeout: 8000,
         },
         (res) => {
           let text = '';
@@ -63,6 +95,9 @@ function requestMesServer(
         }
       );
 
+      // Disable Nagle's algorithm for minimal packet transmission latency
+      req.setNoDelay(true);
+
       req.on('error', (err) => {
         reject(err);
       });
@@ -78,9 +113,14 @@ function requestMesServer(
     });
   };
 
-  return tryRequest('mes.lienchau.vn').catch((err) => {
-    console.warn('DNS/Network issue on mes.lienchau.vn, falling back to 113.161.240.40...', err?.message);
-    return tryRequest('113.161.240.40');
+  // Fast direct IP path first (with Host header), fallback to hostname if needed
+  return tryRequest(cachedHost).catch((err) => {
+    console.warn(`Direct IP ${cachedHost} failed, falling back to mes.lienchau.vn...`, err?.message);
+    return tryRequest('mes.lienchau.vn').then((res) => {
+      // If hostname works, reset to hostname
+      cachedHost = 'mes.lienchau.vn';
+      return res;
+    });
   });
 }
 
@@ -106,15 +146,45 @@ async function startServer() {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
-  // GET: Fetch inventory by user (scannedBy)
+  // GET: Fetch inventory by user (scannedBy) with high-speed memory caching & deduplication
   // http://mes.lienchau.vn:5092/api/FinishedGoodInventory/by-user/{scannedBy}
   app.get('/api/FinishedGoodInventory/by-user/:scannedBy', async (req, res) => {
     try {
       const { scannedBy } = req.params;
-      const result = await requestMesServer(
-        `/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`,
-        'GET'
-      );
+      const isFresh = req.query.fresh === 'true';
+      const now = Date.now();
+
+      // Return fast cached response if within TTL and not forcing fresh
+      if (!isFresh) {
+        const cached = inventoryCache.get(scannedBy);
+        if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+          return res.status(cached.status).json(cached.data);
+        }
+      }
+
+      // In-flight promise deduplication to prevent duplicate network calls
+      let pending = inFlightRequests.get(scannedBy);
+      if (!pending) {
+        pending = requestMesServer(
+          `/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`,
+          'GET'
+        ).finally(() => {
+          inFlightRequests.delete(scannedBy);
+        });
+        inFlightRequests.set(scannedBy, pending);
+      }
+
+      const result = await pending;
+
+      // Cache valid results
+      if (result.status >= 200 && result.status < 300) {
+        inventoryCache.set(scannedBy, {
+          data: result.data,
+          status: result.status,
+          timestamp: Date.now(),
+        });
+      }
+
       return res.status(result.status).json(result.data);
     } catch (error: any) {
       console.error('Error fetching inventory by user from MES API:', error);
@@ -137,6 +207,9 @@ async function startServer() {
         note: String(note || ''),
       };
 
+      // Invalidate cache immediately on write
+      invalidateInventoryCache();
+
       const result = await requestMesServer(
         `/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
         'PUT',
@@ -157,6 +230,10 @@ async function startServer() {
   app.delete('/api/FinishedGoodInventory/:id', async (req, res) => {
     try {
       const { id } = req.params;
+
+      // Invalidate cache immediately on write
+      invalidateInventoryCache();
+
       const result = await requestMesServer(
         `/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
         'DELETE'
@@ -176,6 +253,10 @@ async function startServer() {
   const handleInventoryPush = async (req: express.Request, res: express.Response) => {
     try {
       const payload = req.body;
+
+      // Invalidate cache immediately on new ticket
+      invalidateInventoryCache();
+
       const result = await requestMesServer(
         '/api/FinishedGoodInventory',
         'POST',

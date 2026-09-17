@@ -146,12 +146,14 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
  * GET http://mes.lienchau.vn:5092/api/FinishedGoodInventory/by-user/{scannedBy}
  */
 export async function fetchInventoryByUser(
-  scannedBy: string = '105'
+  scannedBy: string = '105',
+  fresh: boolean = false
 ): Promise<{ success: boolean; data: MaterialTicket[]; error?: string }> {
   const apiBase = getApiBase();
+  const queryParam = fresh ? '?fresh=true' : '';
   const proxyUrl = apiBase
-    ? `${apiBase}/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`
-    : `/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`;
+    ? `${apiBase}/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}${queryParam}`
+    : `/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}${queryParam}`;
 
   const transformItems = (items: any[]): MaterialTicket[] => {
     return items.map((item) => ({
@@ -338,7 +340,7 @@ export async function deleteInventoryItem(id: string | number): Promise<MesApiRe
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && resJson && resJson.success !== false) {
+    if (response.ok && (!resJson || resJson.success !== false)) {
       return {
         success: true,
         message: resJson?.message || 'Đã xóa bản ghi kiểm kê thành công',
@@ -357,7 +359,7 @@ export async function deleteInventoryItem(id: string | number): Promise<MesApiRe
         }
       );
       const directJson = await directRes.json().catch(() => null);
-      if (directRes.ok && directJson && directJson.success !== false) {
+      if (directRes.ok && (!directJson || directJson.success !== false)) {
         return {
           success: true,
           message: directJson?.message || 'Đã xóa bản ghi kiểm kê thành công',

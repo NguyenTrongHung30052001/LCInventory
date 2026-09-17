@@ -25,6 +25,7 @@ import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModa
 import { MaterialTicketDetailModal } from './components/MaterialTicketDetailModal';
 import { EditInventoryModal } from './components/EditInventoryModal';
 import { DirectCameraModal } from './components/DirectCameraModal';
+import { LocationStepModal } from './components/LocationStepModal';
 import { VersionInfoModal } from './components/VersionInfoModal';
 import { ScanErrorModal, ScanErrorInfo } from './components/ScanErrorModal';
 import { LienChauLogo } from './components/LienChauLogo';
@@ -58,6 +59,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal states
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
@@ -99,11 +101,13 @@ export default function App() {
 
   // Fetch inventory list from MES API: GET /api/FinishedGoodInventory/by-user/{scannedBy}
   const loadInventory = useCallback(
-    async (userId: string = scannedByUserId) => {
-      setIsLoadingList(true);
+    async (userId: string = scannedByUserId, fresh: boolean = false) => {
+      if (tickets.length === 0) {
+        setIsLoadingList(true);
+      }
       setListError(null);
       try {
-        const res = await fetchInventoryByUser(userId);
+        const res = await fetchInventoryByUser(userId, fresh);
         if (res.success) {
           setTickets(res.data);
         } else {
@@ -115,7 +119,7 @@ export default function App() {
         setIsLoadingList(false);
       }
     },
-    [scannedByUserId]
+    [scannedByUserId, tickets.length]
   );
 
   // Load inventory on initial mount
@@ -123,44 +127,61 @@ export default function App() {
     loadInventory(scannedByUserId);
   }, [loadInventory, scannedByUserId]);
 
-  // Quy trình: Quét vị trí trước -> Sau đó quét QR vật tư liên tục
+  // Quy trình chuẩn: Bấm Tạo phiếu -> Mở popup điền thông tin vị trí kệ kho (Bước 1)
   const handleStartInventoryFlow = () => {
-    if (!currentLocation) {
-      // Chưa có vị trí -> quét vị trí trước
-      setScannerTarget('location');
-      setScannedLocationQr(null);
-      setScannedMaterialQr(null);
-      setIsCreateModalOpen(false);
-      setIsScannerModalOpen(true);
-      showToast('Bước 1: Quét mã vị trí kệ kho trước');
-    } else {
-      // Đã có vị trí -> tiến hành quét QR vật tư ngay
-      setScannerTarget('material');
-      setScannedMaterialQr(null);
-      setIsCreateModalOpen(false);
-      setIsScannerModalOpen(true);
-      showToast(`Vị trí: ${currentLocation} — Quét mã QR vật tư`);
-    }
+    setIsCreateModalOpen(false);
+    setIsScannerModalOpen(false);
+    setIsLocationModalOpen(true);
   };
 
-  // Đổi sang vị trí kệ khác
+  // Đổi sang vị trí kệ khác -> Mở lại popup chọn vị trí
   const handleSwitchLocation = () => {
+    setIsScannerModalOpen(false);
     setIsCreateModalOpen(false);
+    setIsLocationModalOpen(true);
+  };
+
+  // Mở camera quét tem vị trí từ popup vị trí
+  const handleOpenLocationScanner = () => {
+    setIsLocationModalOpen(false);
     setScannerTarget('location');
     setIsScannerModalOpen(true);
-    showToast('Rê camera vào mã vị trí kệ kho mới');
   };
 
   // Open camera scanner for Material QR
   const handleOpenMaterialScanner = () => {
+    setIsCreateModalOpen(false);
     setScannerTarget('material');
     setIsScannerModalOpen(true);
   };
 
-  // Open camera scanner for Warehouse Location
-  const handleOpenLocationScanner = () => {
-    setScannerTarget('location');
-    setIsScannerModalOpen(true);
+  // Khi người dùng bấm "Tiếp tục" từ popup vị trí: chọn quét tiếp bằng camera hay tự điền
+  const handleConfirmLocation = (loc: string, nextAction: 'scan' | 'manual') => {
+    handleSetCurrentLocation(loc);
+    setIsLocationModalOpen(false);
+    setScannedLocationQr(null);
+
+    if (nextAction === 'scan') {
+      // Qua bước quét QR vật tư bằng Camera
+      setScannerTarget('material');
+      setScannedMaterialQr(null);
+      setTimeout(() => {
+        setIsScannerModalOpen(true);
+      }, 250);
+      showToast(`Vị trí: ${loc} — Quét mã QR vật tư`);
+    } else {
+      // Tự điền thông tin phiếu
+      setScannedMaterialQr(null);
+      setIsCreateModalOpen(true);
+      showToast(`Vị trí: ${loc} — Tự điền thông tin phiếu`);
+    }
+  };
+
+  // Chuyển sang tự điền thông tin ngay từ camera scanner
+  const handleManualEntryFromCamera = () => {
+    setIsScannerModalOpen(false);
+    setScannedMaterialQr(null);
+    setIsCreateModalOpen(true);
   };
 
   // Camera scan success handler
@@ -181,13 +202,10 @@ export default function App() {
 
       handleSetCurrentLocation(cleanLoc);
       setScannedLocationQr(cleanLoc);
-      showToast(`Đã nhận vị trí: ${cleanLoc}. Bắt đầu quét QR vật tư!`);
+      showToast(`Đã nhận vị trí: ${cleanLoc}`);
 
-      // Khi có vị trí xong -> tiến hành quét QR vật tư ngay
-      setScannerTarget('material');
-      setTimeout(() => {
-        setIsScannerModalOpen(true);
-      }, 350);
+      // Quay lại popup vị trí với giá trị đã được điền
+      setIsLocationModalOpen(true);
     } else {
       // scannerTarget === 'material'
       const parsed = parseMaterialQr(scannedRaw);
@@ -290,31 +308,48 @@ export default function App() {
     id: string,
     updatedData: { quantity: number; unit: string; note: string }
   ): Promise<boolean> => {
+    // 1. Optimistic update: Update tickets state immediately (0ms latency for user)
+    const previousTickets = [...tickets];
+    setTickets((prev) =>
+      prev.map((t) =>
+        String(t.id) === String(id)
+          ? {
+              ...t,
+              quantity: updatedData.quantity,
+              unit: updatedData.unit,
+              notes: updatedData.note,
+            }
+          : t
+      )
+    );
+    if (viewingTicket?.id === id) {
+      setViewingTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              quantity: updatedData.quantity,
+              unit: updatedData.unit,
+              notes: updatedData.note,
+            }
+          : null
+      );
+    }
+
     try {
       const res = await updateInventoryItem(id, updatedData);
       if (res.success) {
         showToast(res.message || 'Đã cập nhật bản ghi kiểm kê thành công');
-        // Update viewing ticket if open
-        if (viewingTicket?.id === id) {
-          setViewingTicket((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  quantity: updatedData.quantity,
-                  unit: updatedData.unit,
-                  notes: updatedData.note,
-                }
-              : null
-          );
-        }
-        // Re-fetch directly from MES API
-        await loadInventory(scannedByUserId);
+        // Background sync to ensure consistency
+        loadInventory(scannedByUserId, true);
         return true;
       } else {
+        // Rollback on server error
+        setTickets(previousTickets);
         showToast(`Cập nhật thất bại: ${res.error || 'Lỗi không xác định'}`);
         return false;
       }
     } catch (err: any) {
+      setTickets(previousTickets);
       showToast(`Lỗi cập nhật: ${err.message || 'Không thể kết nối'}`);
       return false;
     }
@@ -322,24 +357,27 @@ export default function App() {
 
   // Delete ticket: DELETE /api/FinishedGoodInventory/{id}
   const handleDeleteTicket = async (id: string) => {
-    const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xóa bản ghi kiểm kê ID #${id} khỏi hệ thống MES không?`
-    );
-    if (!confirmDelete) return;
+    // 1. Optimistic delete: remove card immediately from UI
+    const previousTickets = [...tickets];
+    setTickets((prev) => prev.filter((t) => String(t.id) !== String(id)));
+    if (viewingTicket?.id === id) {
+      setViewingTicket(null);
+    }
 
     showToast(`Đang xóa bản ghi #${id}...`);
     try {
       const res = await deleteInventoryItem(id);
       if (res.success) {
         showToast(res.message || 'Đã xóa bản ghi kiểm kê thành công');
-        if (viewingTicket?.id === id) {
-          setViewingTicket(null);
-        }
-        await loadInventory(scannedByUserId);
+        // Background sync
+        loadInventory(scannedByUserId, true);
       } else {
+        // Rollback on failure
+        setTickets(previousTickets);
         showToast(`Xóa thất bại: ${res.error || 'Lỗi không xác định'}`);
       }
     } catch (err: any) {
+      setTickets(previousTickets);
       showToast(`Lỗi khi xóa: ${err.message || 'Không thể kết nối'}`);
     }
   };
@@ -480,76 +518,6 @@ export default function App() {
 
       {/* Main Mobile Screen */}
       <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
-        {/* ACTIVE LOCATION BAR - THEO QUY TRÌNH: QUÉT VỊ TRÍ TRƯỚC -> QUÉT QR TIẾP TỤC */}
-        {currentLocation ? (
-          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 shadow-xs flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-9 w-9 rounded-xl bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <span>Vị trí kho hiện tại</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-                <div className="text-sm sm:text-base font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
-                  {currentLocation}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                id="btn-main-scan-material"
-                type="button"
-                onClick={handleStartInventoryFlow}
-                className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-                title="Bấm để quét mã QR vật tư tiếp theo"
-              >
-                <Camera className="h-4 w-4" />
-                <span>Quét QR</span>
-              </button>
-
-              <button
-                id="btn-main-change-location"
-                type="button"
-                onClick={handleSwitchLocation}
-                className="h-9 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1"
-                title="Đổi sang vị trí kệ kho khác"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span className="hidden xs:inline">Đổi vị trí</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 shadow-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-9 w-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                  Bước 1: Quét vị trí kệ kho
-                </div>
-                <div className="text-[11px] text-amber-700 dark:text-amber-400">
-                  Quét mã vị trí trước khi tiến hành quét QR vật tư
-                </div>
-              </div>
-            </div>
-
-            <button
-              id="btn-start-scan-location"
-              type="button"
-              onClick={handleStartInventoryFlow}
-              className="h-9 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
-            >
-              <Camera className="h-4 w-4" />
-              <span>Quét vị trí</span>
-            </button>
-          </div>
-        )}
-
         {/* SEARCH INPUT */}
         <div className="space-y-2">
           <div className="relative">
@@ -754,7 +722,10 @@ export default function App() {
                     {/* Nút Sửa: Chỉ sửa đơn vị tính, số lượng, ghi chú */}
                     <button
                       type="button"
-                      onClick={() => setEditingTicket(t)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTicket(t);
+                      }}
                       className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
                       title="Chỉnh sửa (ĐVT, số lượng, ghi chú)"
                     >
@@ -764,7 +735,10 @@ export default function App() {
                     {/* Nút Xóa: Gọi API DELETE /api/FinishedGoodInventory/{id} */}
                     <button
                       type="button"
-                      onClick={() => handleDeleteTicket(t.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTicket(t.id);
+                      }}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
                       title="Xóa dòng kiểm kê trên MES"
                     >
@@ -773,7 +747,10 @@ export default function App() {
 
                     <button
                       type="button"
-                      onClick={() => handleCopyText(t.rawQr || t.materialCode)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyText(t.rawQr || t.materialCode);
+                      }}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                       title="Sao chép"
                     >
@@ -811,6 +788,16 @@ export default function App() {
         </div>
       </main>
 
+      {/* MODAL 0: LOCATION STEP MODAL (BƯỚC 1: ĐIỀN HOẶC QUÉT VỊ TRÍ) */}
+      <LocationStepModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        currentLocation={currentLocation}
+        scannedLocationQr={scannedLocationQr}
+        onConfirmLocation={handleConfirmLocation}
+        onOpenLocationScanner={handleOpenLocationScanner}
+      />
+
       {/* MODAL 1: MATERIAL TICKET CREATION FORM */}
       <MaterialTicketCreateModal
         isOpen={isCreateModalOpen}
@@ -839,6 +826,7 @@ export default function App() {
         scannerTarget={scannerTarget}
         currentLocation={currentLocation}
         onSwitchLocation={handleSwitchLocation}
+        onManualEntry={handleManualEntryFromCamera}
         title={
           scannerTarget === 'material'
             ? 'Quét mã QR vật tư'
