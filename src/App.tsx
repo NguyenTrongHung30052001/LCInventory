@@ -339,64 +339,13 @@ export default function App() {
           setIsCreateModalOpen(true);
           handleOpenMaterialScanner();
         }}
+        onExportCSV={handleExportCSV}
         onOpenVersionModal={() => setIsVersionModalOpen(true)}
       />
 
       {/* Main Mobile Screen */}
       <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
-        {/* 1. PRIMARY MOBILE ACTIONS BAR */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Main Action: Quét QR bằng Camera */}
-          <button
-            id="btn-main-mobile-scan"
-            type="button"
-            onClick={() => {
-              setScannedMaterialQr(null);
-              setScannedLocationQr(null);
-              setIsCreateModalOpen(true);
-              handleOpenMaterialScanner();
-            }}
-            className="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-xs transition-colors text-sm"
-          >
-            <Camera className="h-5 w-5" />
-            <span>Quét QR</span>
-          </button>
-
-          {/* Secondary Action: Tạo Phiếu */}
-          <button
-            id="btn-main-mobile-create"
-            type="button"
-            onClick={() => {
-              setScannedMaterialQr(null);
-              setScannedLocationQr(null);
-              setIsCreateModalOpen(true);
-            }}
-            className="h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center gap-2 shadow-xs transition-colors text-sm"
-          >
-            <Plus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <span>Tạo phiếu</span>
-          </button>
-        </div>
-
-        {/* 2. STATS PILL ROW */}
-        <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-          <span className="font-semibold">
-            Tổng phiếu: <strong className="text-slate-900 dark:text-white font-mono">{tickets.length}</strong>
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1"
-              title="Xuất file CSV"
-            >
-              <Download className="h-3.5 w-3.5 text-slate-400" />
-              <span>Xuất CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 3. SEARCH INPUT */}
+        {/* SEARCH INPUT */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input

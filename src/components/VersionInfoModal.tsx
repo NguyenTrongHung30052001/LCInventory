@@ -114,10 +114,11 @@ export const VersionInfoModal: React.FC<VersionInfoModalProps> = ({ isOpen, onCl
                 Nội dung cập nhật
               </span>
               <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
+                <li>Hỗ trợ Vercel Serverless Function (/api/FinishedGoodInventory)</li>
+                <li>Khắc phục lỗi 404 &amp; Mixed Content khi deploy trên Vercel</li>
+                <li>Popup cảnh báo chi tiết quy chuẩn 6 trường khi quét mã QR</li>
                 <li>Nhận diện thương hiệu logo chính thức Liên Châu</li>
-                <li>Hiển thị phiên bản &amp; thời gian cập nhật chi tiết</li>
                 <li>Chuẩn hóa API MES FinishedGoodInventory (Port 5092)</li>
-                <li>Quét QR trực tiếp tự động tách 6 trường</li>
               </ul>
             </div>
           </div>
