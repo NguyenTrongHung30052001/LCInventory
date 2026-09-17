@@ -19,7 +19,6 @@ import {
   Edit3,
   RefreshCw,
   Loader2,
-  User,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
@@ -32,6 +31,7 @@ import { LienChauLogo } from './components/LienChauLogo';
 import { Toast } from './components/Toast';
 import { MaterialTicket } from './types';
 import { APP_VERSION } from './config/version';
+import { getAppUrlParams } from './utils/urlParams';
 import {
   SAMPLE_MATERIAL_QRS,
   SAMPLE_WAREHOUSE_LOCATIONS,
@@ -45,9 +45,14 @@ import {
 } from './services/mesApi';
 
 export default function App() {
-  // Inventory items loaded directly from MES API by scannedBy ID (bảng danh sách chỉ lấy danh sách trong API)
+  // Lấy userid và warehouseCode trực tiếp từ URL params (?userid=...&warehouseCode=...)
+  // Không cần hiển thị nhập/chọn trên giao diện
+  const urlConfig = getAppUrlParams();
+  const [scannedByUserId] = useState<string>(urlConfig.userId);
+  const [warehouseCode] = useState<string>(urlConfig.warehouseCode);
+
+  // Inventory items loaded directly from MES API by scannedBy ID
   const [tickets, setTickets] = useState<MaterialTicket[]>([]);
-  const [scannedByUserId, setScannedByUserId] = useState<string>('105');
   const [isLoadingList, setIsLoadingList] = useState<boolean>(true);
   const [listError, setListError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +103,7 @@ export default function App() {
     [scannedByUserId]
   );
 
-  // Load inventory on initial mount and when user ID changes
+  // Load inventory on initial mount
   useEffect(() => {
     loadInventory(scannedByUserId);
   }, [loadInventory, scannedByUserId]);
@@ -183,6 +188,7 @@ export default function App() {
       const ticketToSave: MaterialTicket = {
         ...newTicket,
         scannedBy: scannedByUserId,
+        warehouseCode: warehouseCode,
       };
 
       const mesRes = await sendToMesInventory(ticketToSave);
@@ -320,8 +326,8 @@ export default function App() {
       `"${(t.unit || '').replace(/"/g, '""')}"`,
       `"${t.quantity}"`,
       `"${(t.warehouseLocation || '').replace(/"/g, '""')}"`,
-      `"${(t.warehouseCode || 'FGW').replace(/"/g, '""')}"`,
-      `"${(t.scannedBy || '105').replace(/"/g, '""')}"`,
+      `"${(t.warehouseCode || warehouseCode || 'FGW').replace(/"/g, '""')}"`,
+      `"${(t.scannedBy || scannedByUserId || '105').replace(/"/g, '""')}"`,
       `"${(t.notes || '').replace(/"/g, '""')}"`,
       `"${t.mesSyncStatus || 'synced'}"`,
       `"${new Date(t.createdAt).toLocaleString('vi-VN')}"`,
@@ -408,7 +414,7 @@ export default function App() {
 
       {/* Main Mobile Screen */}
       <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
-        {/* SEARCH INPUT & API USER FILTER */}
+        {/* SEARCH INPUT */}
         <div className="space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -417,7 +423,7 @@ export default function App() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm mã VT, màu, size, lô, kho, ghi chú..."
+              placeholder="Tìm mã VT, màu, size, lô, vị trí, ghi chú..."
               className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
             />
             {searchTerm && (
@@ -431,30 +437,17 @@ export default function App() {
             )}
           </div>
 
-          {/* User ID Indicator & Refresh Bar */}
+          {/* Clean Action Bar: Ticket count & Refresh button (không hiển thị mã user và mã kho trên UI) */}
           <div className="flex items-center justify-between px-1 text-xs">
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-              <User className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Người quét:</span>
-              <input
-                type="text"
-                value={scannedByUserId}
-                onChange={(e) => setScannedByUserId(e.target.value)}
-                onBlur={() => loadInventory(scannedByUserId)}
-                onKeyDown={(e) => e.key === 'Enter' && loadInventory(scannedByUserId)}
-                className="h-6 w-16 px-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-                title="Bấm để đổi ID người quét và tải lại danh sách"
-              />
-              <span className="text-[11px] text-slate-400 font-mono">
-                ({tickets.length} phiếu)
-              </span>
-            </div>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Danh sách kiểm kê ({tickets.length} phiếu)
+            </span>
 
             <button
               type="button"
               onClick={() => loadInventory(scannedByUserId)}
               disabled={isLoadingList}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-colors disabled:opacity-50 shadow-2xs"
               title="Tải lại danh sách từ máy chủ MES"
             >
               <RefreshCw
@@ -485,7 +478,7 @@ export default function App() {
             <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
               <p className="text-xs text-slate-500">
-                Đang tải danh sách kiểm kê từ MES (ID: {scannedByUserId})...
+                Đang tải danh sách kiểm kê từ máy chủ MES...
               </p>
             </div>
           ) : filteredTickets.length === 0 ? (
@@ -495,7 +488,7 @@ export default function App() {
                 <LienChauLogo size="lg" />
               </div>
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
-                Chưa có phiếu vật tư cho người quét #{scannedByUserId}
+                Chưa có phiếu vật tư kiểm kê
               </p>
               <p className="text-[11px] text-slate-400 mb-4 max-w-xs">
                 Đưa camera quét mã QR trên cuộn vải/vật tư để tạo và gửi dữ liệu vào MES.
@@ -695,6 +688,8 @@ export default function App() {
         onClearScannedLocationQr={() => setScannedLocationQr(null)}
         onShowScanError={(err) => setScanError(err)}
         isSaving={isSaving}
+        defaultWarehouseCode={warehouseCode}
+        defaultScannedBy={scannedByUserId}
       />
 
       {/* MODAL 2: DIRECT CAMERA SCANNER */}

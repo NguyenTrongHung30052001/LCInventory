@@ -10,8 +10,6 @@ import {
   Trash2,
   FileText,
   Send,
-  Warehouse,
-  User,
   Edit3,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
@@ -174,35 +172,15 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               </div>
             </div>
 
-            {/* Thông tin kho & Người quét */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
-                  <MapPin className="h-3 w-3 text-emerald-600" />
-                  Vị trí
-                </span>
-                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
-                  {ticket.warehouseLocation || 'A1-02'}
-                </span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
-                  <Warehouse className="h-3 w-3 text-emerald-600" />
-                  Mã kho
-                </span>
-                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
-                  {ticket.warehouseCode || 'FGW'}
-                </span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
-                  <User className="h-3 w-3 text-emerald-600" />
-                  Người quét
-                </span>
-                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
-                  {ticket.scannedBy || '105'}
-                </span>
-              </div>
+            {/* Vị trí kho */}
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 flex items-center gap-1.5 font-medium">
+                <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                Vị trí kệ kho
+              </span>
+              <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                {ticket.warehouseLocation || 'A1-02'}
+              </span>
             </div>
 
             {/* Ghi chú */}

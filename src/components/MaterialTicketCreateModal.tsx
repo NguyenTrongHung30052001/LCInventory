@@ -32,6 +32,8 @@ interface MaterialTicketCreateModalProps {
   onClearScannedLocationQr: () => void;
   onShowScanError?: (error: ScanErrorInfo) => void;
   isSaving?: boolean;
+  defaultWarehouseCode?: string;
+  defaultScannedBy?: string;
 }
 
 export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps> = ({
@@ -46,6 +48,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   onClearScannedLocationQr,
   onShowScanError,
   isSaving = false,
+  defaultWarehouseCode = 'FGW',
+  defaultScannedBy = '105',
 }) => {
   const [rawQr, setRawQr] = useState('');
 
@@ -61,8 +65,6 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   const [unit, setUnit] = useState('Cuộn');
   const [quantity, setQuantity] = useState<string | number>('1');
   const [warehouseLocation, setWarehouseLocation] = useState('A1-02');
-  const [warehouseCode, setWarehouseCode] = useState('FGW');
-  const [scannedBy, setScannedBy] = useState('105');
 
   // Ghi chú (yêu cầu thêm)
   const [notes, setNotes] = useState('');
@@ -84,8 +86,6 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         setUnit('Cuộn');
         setQuantity('1');
         setWarehouseLocation('A1-02');
-        setWarehouseCode('FGW');
-        setScannedBy('105');
         setNotes('');
         setIsParsed(false);
       }
@@ -151,8 +151,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         unit: unit.trim() || 'Cuộn',
         quantity: quantity || '1',
         warehouseLocation: warehouseLocation.trim() || 'A1-02',
-        warehouseCode: warehouseCode.trim() || 'FGW',
-        scannedBy: scannedBy.trim() || '105',
+        warehouseCode: defaultWarehouseCode.trim() || 'FGW',
+        scannedBy: defaultScannedBy.trim() || '105',
         notes: notes.trim(),
       };
 
@@ -529,42 +529,6 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                       {loc.code}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              {/* Mã kho & Người quét (cho API MES) */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label
-                    htmlFor="input-warehouse-code"
-                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
-                  >
-                    Mã kho (warehouseCode)
-                  </label>
-                  <input
-                    id="input-warehouse-code"
-                    type="text"
-                    value={warehouseCode}
-                    onChange={(e) => setWarehouseCode(e.target.value)}
-                    placeholder="FGW"
-                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="input-scanned-by"
-                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
-                  >
-                    Mã người quét (scannedBy)
-                  </label>
-                  <input
-                    id="input-scanned-by"
-                    type="text"
-                    value={scannedBy}
-                    onChange={(e) => setScannedBy(e.target.value)}
-                    placeholder="105"
-                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  />
                 </div>
               </div>
 
