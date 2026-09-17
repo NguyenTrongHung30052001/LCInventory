@@ -6,6 +6,7 @@ import { createServer as createViteServer } from 'vite';
 /**
  * Utility helper to communicate directly with MES Server (http://mes.lienchau.vn:5092)
  * using Node's standard `http` module to avoid dual-stack/undici ECONNREFUSED issues.
+ * Automatically falls back to direct IP 113.161.240.40 if DNS lookup fails.
  */
 function requestMesServer(
   targetPath: string,
@@ -13,66 +14,73 @@ function requestMesServer(
   bodyData?: any,
   contentType: string = 'application/json'
 ): Promise<{ status: number; text: string; data: any }> {
-  return new Promise((resolve, reject) => {
-    const postData =
-      bodyData != null
-        ? typeof bodyData === 'string'
-          ? bodyData
-          : JSON.stringify(bodyData)
-        : null;
+  const tryRequest = (hostname: string) => {
+    return new Promise<{ status: number; text: string; data: any }>((resolve, reject) => {
+      const postData =
+        bodyData != null
+          ? typeof bodyData === 'string'
+            ? bodyData
+            : JSON.stringify(bodyData)
+          : null;
 
-    const headers: Record<string, string | number> = {
-      Host: 'mes.lienchau.vn:5092',
-      Accept: 'application/json',
-    };
+      const headers: Record<string, string | number> = {
+        Host: 'mes.lienchau.vn:5092',
+        Accept: 'application/json',
+      };
 
-    if (postData != null) {
-      headers['Content-Type'] = contentType;
-      headers['Content-Length'] = Buffer.byteLength(postData);
-    }
-
-    const req = http.request(
-      {
-        hostname: 'mes.lienchau.vn',
-        port: 5092,
-        path: targetPath,
-        method: method,
-        headers: headers,
-        timeout: 12000,
-      },
-      (res) => {
-        let text = '';
-        res.on('data', (chunk) => {
-          text += chunk;
-        });
-        res.on('end', () => {
-          let parsed: any;
-          try {
-            parsed = JSON.parse(text);
-          } catch {
-            parsed = { message: text };
-          }
-          resolve({
-            status: res.statusCode || 200,
-            text,
-            data: parsed,
-          });
-        });
+      if (postData != null) {
+        headers['Content-Type'] = contentType;
+        headers['Content-Length'] = Buffer.byteLength(postData);
       }
-    );
 
-    req.on('error', (err) => {
-      reject(err);
+      const req = http.request(
+        {
+          hostname,
+          port: 5092,
+          path: targetPath,
+          method: method,
+          headers: headers,
+          timeout: 12000,
+        },
+        (res) => {
+          let text = '';
+          res.on('data', (chunk) => {
+            text += chunk;
+          });
+          res.on('end', () => {
+            let parsed: any;
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              parsed = { message: text };
+            }
+            resolve({
+              status: res.statusCode || 200,
+              text,
+              data: parsed,
+            });
+          });
+        }
+      );
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+
+      req.on('timeout', () => {
+        req.destroy(new Error('Kết nối máy chủ MES (5092) bị quá thời gian quy định'));
+      });
+
+      if (postData != null) {
+        req.write(postData);
+      }
+      req.end();
     });
+  };
 
-    req.on('timeout', () => {
-      req.destroy(new Error('Kết nối máy chủ MES (5092) bị quá thời gian quy định'));
-    });
-
-    if (postData != null) {
-      req.write(postData);
-    }
-    req.end();
+  return tryRequest('mes.lienchau.vn').catch((err) => {
+    console.warn('DNS/Network issue on mes.lienchau.vn, falling back to 113.161.240.40...', err?.message);
+    return tryRequest('113.161.240.40');
   });
 }
 
