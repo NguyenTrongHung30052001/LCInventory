@@ -1,6 +1,6 @@
 {
   "name": "QR Scanner",
-  "description": "Ứng dụng web quét mã QR hiện đại với giao diện trực quan, hỗ trợ camera và tải ảnh.",
+  "description": "Ứng dụng quét mã QR và tạo phiếu vật tư kho tự động bóc tách 6 trường từ QR (dấu ^^ hoặc -) cùng đơn vị tính, số lượng và vị trí kho.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -14,18 +14,24 @@ import {
   FileImage,
 } from 'lucide-react';
 import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
-import { SAMPLE_QR_ITEMS } from '../utils/qrParser';
+import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
 
 interface DirectCameraModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScanSuccess: (rawQrData: string) => void;
+  title?: string;
+  description?: string;
+  samples?: { label: string; description?: string; desc?: string; raw?: string; code?: string }[];
 }
 
 export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   isOpen,
   onClose,
   onScanSuccess,
+  title = 'Quét Mã QR Trực Tiếp',
+  description = 'Rê camera vào mã QR — Tự động bóc tách & điền vào form tạo phiếu',
+  samples,
 }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -311,7 +317,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>Quét Mã QR Trực Tiếp</span>
+                  <span>{title}</span>
                   {scanLocked && (
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
@@ -320,7 +326,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                   )}
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Rê camera vào mã QR — Tự động bóc tách & điền vào form tạo phiếu
+                  {description}
                 </p>
               </div>
             </div>
@@ -519,28 +525,32 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5"
+                className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto"
               >
-                {SAMPLE_QR_ITEMS.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectSample(item.raw)}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-indigo-900/40 border border-slate-700/60 hover:border-indigo-500/50 text-left transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-xs font-semibold text-slate-200 block truncate">
-                        {item.label}
+                {(samples || SAMPLE_MATERIAL_QRS).map((item, idx) => {
+                  const val = item.raw || item.code || '';
+                  const desc = item.description || item.desc || '';
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectSample(val)}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-indigo-900/40 border border-slate-700/60 hover:border-indigo-500/50 text-left transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-xs font-semibold text-slate-200 block truncate">
+                          {item.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {desc || val}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-indigo-400 font-semibold shrink-0 ml-2">
+                        Chọn &rarr;
                       </span>
-                      <span className="text-[10px] text-slate-400 block truncate">
-                        {item.description}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-indigo-400 font-semibold shrink-0 ml-2">
-                      Chọn &rarr;
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </motion.div>
             )}
           </div>
