@@ -1,0 +1,6 @@
+{
+  "name": "QR Scanner",
+  "description": "Ứng dụng web quét mã QR hiện đại với giao diện trực quan, hỗ trợ camera và tải ảnh.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
