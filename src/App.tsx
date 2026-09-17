@@ -66,6 +66,21 @@ export default function App() {
   const [viewingTicket, setViewingTicket] = useState<MaterialTicket | null>(null);
   const [editingTicket, setEditingTicket] = useState<MaterialTicket | null>(null);
 
+  // Active warehouse location state (persisted across scans)
+  const [currentLocation, setCurrentLocation] = useState<string>(() => {
+    return localStorage.getItem('lc_inventory_active_location') || '';
+  });
+
+  const handleSetCurrentLocation = (loc: string) => {
+    const clean = loc.trim();
+    setCurrentLocation(clean);
+    if (clean) {
+      localStorage.setItem('lc_inventory_active_location', clean);
+    } else {
+      localStorage.removeItem('lc_inventory_active_location');
+    }
+  };
+
   // Scanned QR values passed into create modal
   const [scannedMaterialQr, setScannedMaterialQr] = useState<string | null>(null);
   const [scannedLocationQr, setScannedLocationQr] = useState<string | null>(null);
@@ -108,6 +123,34 @@ export default function App() {
     loadInventory(scannedByUserId);
   }, [loadInventory, scannedByUserId]);
 
+  // Quy trình: Quét vị trí trước -> Sau đó quét QR vật tư liên tục
+  const handleStartInventoryFlow = () => {
+    if (!currentLocation) {
+      // Chưa có vị trí -> quét vị trí trước
+      setScannerTarget('location');
+      setScannedLocationQr(null);
+      setScannedMaterialQr(null);
+      setIsCreateModalOpen(false);
+      setIsScannerModalOpen(true);
+      showToast('Bước 1: Quét mã vị trí kệ kho trước');
+    } else {
+      // Đã có vị trí -> tiến hành quét QR vật tư ngay
+      setScannerTarget('material');
+      setScannedMaterialQr(null);
+      setIsCreateModalOpen(false);
+      setIsScannerModalOpen(true);
+      showToast(`Vị trí: ${currentLocation} — Quét mã QR vật tư`);
+    }
+  };
+
+  // Đổi sang vị trí kệ khác
+  const handleSwitchLocation = () => {
+    setIsCreateModalOpen(false);
+    setScannerTarget('location');
+    setIsScannerModalOpen(true);
+    showToast('Rê camera vào mã vị trí kệ kho mới');
+  };
+
   // Open camera scanner for Material QR
   const handleOpenMaterialScanner = () => {
     setScannerTarget('material');
@@ -124,7 +167,29 @@ export default function App() {
   const handleScanSuccess = (scannedRaw: string) => {
     setIsScannerModalOpen(false);
 
-    if (scannerTarget === 'material') {
+    if (scannerTarget === 'location') {
+      const cleanLoc = scannedRaw.trim();
+      if (!cleanLoc) {
+        setScanError({
+          type: 'location_error',
+          title: 'Mã vị trí kho không hợp lệ',
+          message: 'Dữ liệu quét vị trí kho bị rỗng hoặc không đọc được.',
+          rawQr: scannedRaw,
+        });
+        return;
+      }
+
+      handleSetCurrentLocation(cleanLoc);
+      setScannedLocationQr(cleanLoc);
+      showToast(`Đã nhận vị trí: ${cleanLoc}. Bắt đầu quét QR vật tư!`);
+
+      // Khi có vị trí xong -> tiến hành quét QR vật tư ngay
+      setScannerTarget('material');
+      setTimeout(() => {
+        setIsScannerModalOpen(true);
+      }, 350);
+    } else {
+      // scannerTarget === 'material'
       const parsed = parseMaterialQr(scannedRaw);
       if (!parsed.isValid) {
         setScanError({
@@ -142,19 +207,6 @@ export default function App() {
       setScannedMaterialQr(scannedRaw);
       setIsCreateModalOpen(true);
       showToast(`Đã quét mã: ${parsed.materialCode}`);
-    } else {
-      if (!scannedRaw || !scannedRaw.trim()) {
-        setScanError({
-          type: 'location_error',
-          title: 'Mã vị trí kho không hợp lệ',
-          message: 'Dữ liệu quét vị trí kho bị rỗng hoặc không đọc được.',
-          rawQr: scannedRaw,
-        });
-        return;
-      }
-      setScannedLocationQr(scannedRaw.trim());
-      setIsCreateModalOpen(true);
-      showToast(`Vị trí: ${scannedRaw.trim()}`);
     }
   };
 
@@ -175,6 +227,7 @@ export default function App() {
         setScannedMaterialQr(scanError.rawQr);
       } else {
         setScannedLocationQr(scanError.rawQr);
+        handleSetCurrentLocation(scanError.rawQr.trim());
       }
     }
     setScanError(null);
@@ -182,29 +235,51 @@ export default function App() {
   };
 
   // Save new material ticket & call MES API: POST /api/FinishedGoodInventory
-  const handleSaveTicket = async (newTicket: MaterialTicket) => {
+  // Khi quét QR xong, điền hết thông tin và bấm nút submit thì tiếp tục quét QR tiếp!
+  const handleSaveTicket = async (
+    newTicket: MaterialTicket,
+    action: 'continue' | 'close' = 'continue'
+  ) => {
     setIsSaving(true);
     try {
+      const ticketLocation = newTicket.warehouseLocation || currentLocation || 'A1-02';
+      if (!currentLocation && newTicket.warehouseLocation) {
+        handleSetCurrentLocation(newTicket.warehouseLocation);
+      }
+
       const ticketToSave: MaterialTicket = {
         ...newTicket,
+        warehouseLocation: ticketLocation,
         scannedBy: scannedByUserId,
         warehouseCode: warehouseCode,
       };
 
       const mesRes = await sendToMesInventory(ticketToSave);
       setScannedMaterialQr(null);
-      setScannedLocationQr(null);
 
       if (mesRes.success) {
-        showToast('Đã lưu & gửi MES thành công!');
+        showToast(`Đã lưu & gửi MES thành công: ${ticketToSave.materialCode}!`);
       } else {
-        showToast(`Đã tạo phiếu (Lỗi gửi MES: ${mesRes.error || 'Kiểm tra mạng'})`);
+        showToast(`Đã lưu phiếu (Lỗi gửi MES: ${mesRes.error || 'Kiểm tra mạng'})`);
       }
-      // Re-fetch directly from MES API
-      await loadInventory(scannedByUserId);
+
+      // Re-fetch directly from MES API ngầm
+      loadInventory(scannedByUserId);
+
+      if (action === 'continue') {
+        // Tiếp tục quét QR tiếp tại vị trí hiện tại
+        setIsCreateModalOpen(false);
+        setScannerTarget('material');
+        setTimeout(() => {
+          setIsScannerModalOpen(true);
+        }, 350);
+      } else {
+        // Dừng quét & đóng modal
+        setIsCreateModalOpen(false);
+      }
     } catch (err: any) {
       showToast(`Lỗi gửi dữ liệu: ${err.message || 'Không thể kết nối'}`);
-      await loadInventory(scannedByUserId);
+      loadInventory(scannedByUserId);
     } finally {
       setIsSaving(false);
     }
@@ -397,23 +472,84 @@ export default function App() {
         ticketCount={tickets.length}
         beepEnabled={beepEnabled}
         onToggleBeep={() => setBeepEnabled((prev) => !prev)}
-        onOpenCreateTicket={() => {
-          setScannedMaterialQr(null);
-          setScannedLocationQr(null);
-          setIsCreateModalOpen(true);
-        }}
-        onOpenQuickScan={() => {
-          setScannedMaterialQr(null);
-          setScannedLocationQr(null);
-          setIsCreateModalOpen(true);
-          handleOpenMaterialScanner();
-        }}
+        onOpenCreateTicket={handleStartInventoryFlow}
+        onOpenQuickScan={handleStartInventoryFlow}
         onExportCSV={handleExportCSV}
         onOpenVersionModal={() => setIsVersionModalOpen(true)}
       />
 
       {/* Main Mobile Screen */}
       <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
+        {/* ACTIVE LOCATION BAR - THEO QUY TRÌNH: QUÉT VỊ TRÍ TRƯỚC -> QUÉT QR TIẾP TỤC */}
+        {currentLocation ? (
+          <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 shadow-xs flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-9 w-9 rounded-xl bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <span>Vị trí kho hiện tại</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div className="text-sm sm:text-base font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                  {currentLocation}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                id="btn-main-scan-material"
+                type="button"
+                onClick={handleStartInventoryFlow}
+                className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                title="Bấm để quét mã QR vật tư tiếp theo"
+              >
+                <Camera className="h-4 w-4" />
+                <span>Quét QR</span>
+              </button>
+
+              <button
+                id="btn-main-change-location"
+                type="button"
+                onClick={handleSwitchLocation}
+                className="h-9 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1"
+                title="Đổi sang vị trí kệ kho khác"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="hidden xs:inline">Đổi vị trí</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 shadow-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-9 w-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  Bước 1: Quét vị trí kệ kho
+                </div>
+                <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                  Quét mã vị trí trước khi tiến hành quét QR vật tư
+                </div>
+              </div>
+            </div>
+
+            <button
+              id="btn-start-scan-location"
+              type="button"
+              onClick={handleStartInventoryFlow}
+              className="h-9 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
+            >
+              <Camera className="h-4 w-4" />
+              <span>Quét vị trí</span>
+            </button>
+          </div>
+        )}
+
         {/* SEARCH INPUT */}
         <div className="space-y-2">
           <div className="relative">
@@ -681,8 +817,10 @@ export default function App() {
         onClose={() => setIsCreateModalOpen(false)}
         onOpenMaterialScanner={handleOpenMaterialScanner}
         onOpenLocationScanner={handleOpenLocationScanner}
+        onSwitchLocation={handleSwitchLocation}
         scannedMaterialQr={scannedMaterialQr}
         scannedLocationQr={scannedLocationQr}
+        currentLocation={currentLocation}
         onSaveTicket={handleSaveTicket}
         onClearScannedMaterialQr={() => setScannedMaterialQr(null)}
         onClearScannedLocationQr={() => setScannedLocationQr(null)}
@@ -698,15 +836,18 @@ export default function App() {
         onClose={() => setIsScannerModalOpen(false)}
         onScanSuccess={handleScanSuccess}
         onScanError={handleCameraScanError}
+        scannerTarget={scannerTarget}
+        currentLocation={currentLocation}
+        onSwitchLocation={handleSwitchLocation}
         title={
           scannerTarget === 'material'
             ? 'Quét mã QR vật tư'
-            : 'Quét vị trí kho'
+            : 'Bước 1: Quét vị trí kho'
         }
         description={
           scannerTarget === 'material'
-            ? 'Đưa camera vào mã QR'
-            : 'Đưa camera vào mã vị trí kệ kho'
+            ? `Vị trí: ${currentLocation || 'A1-02'} — Đưa camera vào tem QR vật tư`
+            : 'Đưa camera vào tem mã vị trí kệ kho'
         }
         samples={
           scannerTarget === 'material'

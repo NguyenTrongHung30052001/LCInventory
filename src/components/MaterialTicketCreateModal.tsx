@@ -11,6 +11,7 @@ import {
   MapPin,
   FileText,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
 import {
@@ -25,9 +26,11 @@ interface MaterialTicketCreateModalProps {
   onClose: () => void;
   onOpenMaterialScanner: () => void;
   onOpenLocationScanner: () => void;
+  onSwitchLocation?: () => void;
   scannedMaterialQr: string | null;
   scannedLocationQr: string | null;
-  onSaveTicket: (ticket: MaterialTicket) => Promise<void> | void;
+  currentLocation?: string | null;
+  onSaveTicket: (ticket: MaterialTicket, action?: 'continue' | 'close') => Promise<void> | void;
   onClearScannedMaterialQr: () => void;
   onClearScannedLocationQr: () => void;
   onShowScanError?: (error: ScanErrorInfo) => void;
@@ -41,8 +44,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   onClose,
   onOpenMaterialScanner,
   onOpenLocationScanner,
+  onSwitchLocation,
   scannedMaterialQr,
   scannedLocationQr,
+  currentLocation,
   onSaveTicket,
   onClearScannedMaterialQr,
   onClearScannedLocationQr,
@@ -64,17 +69,21 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   // Warehouse & quantity fields
   const [unit, setUnit] = useState('Cuộn');
   const [quantity, setQuantity] = useState<string | number>('1');
-  const [warehouseLocation, setWarehouseLocation] = useState('A1-02');
+  const [warehouseLocation, setWarehouseLocation] = useState(currentLocation || 'A1-02');
 
   // Ghi chú (yêu cầu thêm)
   const [notes, setNotes] = useState('');
 
   const [isParsed, setIsParsed] = useState(false);
   const [localSaving, setLocalSaving] = useState(false);
+  const [submitAction, setSubmitAction] = useState<'continue' | 'close'>('continue');
 
-  // Reset form when opened fresh
+  // Reset form when opened fresh, keep warehouse location
   useEffect(() => {
     if (isOpen) {
+      if (currentLocation) {
+        setWarehouseLocation(currentLocation);
+      }
       if (!scannedMaterialQr) {
         setRawQr('');
         setMaterialCode('');
@@ -85,12 +94,11 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         setProductionOrder('');
         setUnit('Cuộn');
         setQuantity('1');
-        setWarehouseLocation('A1-02');
         setNotes('');
         setIsParsed(false);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, currentLocation]);
 
   // When scannedMaterialQr updates (from camera scan)
   useEffect(() => {
@@ -156,8 +164,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         notes: notes.trim(),
       };
 
-      await onSaveTicket(newTicket);
-      onClose();
+      await onSaveTicket(newTicket, submitAction);
+      if (submitAction === 'close') {
+        onClose();
+      }
     } finally {
       setLocalSaving(false);
     }
@@ -202,6 +212,40 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
 
           {/* Form Body */}
           <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
+            {/* 0. VỊ TRÍ KHO HIỆN TẠI (LOCKED CHO PHIÊN KIỂM KÊ) */}
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                    Vị trí kệ kho
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                    {warehouseLocation || 'Chưa chọn vị trí'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                id="btn-change-location-in-modal"
+                type="button"
+                onClick={() => {
+                  if (onSwitchLocation) {
+                    onSwitchLocation();
+                  } else {
+                    onOpenLocationScanner();
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1 shrink-0 shadow-2xs transition-colors"
+                title="Đổi sang vị trí kệ khác"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span>Đổi vị trí</span>
+              </button>
+            </div>
+
             {/* 1. KHỐI QUÉT QR */}
             <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
@@ -552,20 +596,39 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-2 flex items-center gap-2">
+            {/* Actions: Hủy, Lưu & Đóng, Lưu & Quét tiếp (Primary) */}
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex items-center gap-2 flex-1">
+                <button
+                  id="btn-cancel-create-modal"
+                  type="button"
+                  disabled={submitting}
+                  onClick={onClose}
+                  className="flex-1 h-11 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+
+                <button
+                  id="btn-save-and-close"
+                  type="submit"
+                  disabled={submitting}
+                  onClick={() => setSubmitAction('close')}
+                  className="flex-1 h-11 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs disabled:opacity-60 transition-colors"
+                  title="Lưu bản ghi này và dừng quét"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Lưu & Đóng</span>
+                </button>
+              </div>
+
               <button
-                type="button"
-                disabled={submitting}
-                onClick={onClose}
-                className="flex-1 h-11 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
+                id="btn-save-and-scan-next"
                 type="submit"
                 disabled={submitting}
-                className="flex-[2] h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 transition-all"
+                onClick={() => setSubmitAction('continue')}
+                className="sm:flex-[1.5] h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 transition-all"
+                title="Lưu và tự động mở camera quét mã QR tiếp theo tại vị trí này"
               >
                 {submitting ? (
                   <>
@@ -574,8 +637,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
-                    <span>Lưu & Gửi MES</span>
+                    <Camera className="h-4 w-4" />
+                    <span>Lưu & Quét tiếp</span>
                   </>
                 )}
               </button>

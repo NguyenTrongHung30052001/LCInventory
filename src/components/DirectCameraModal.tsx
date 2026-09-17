@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileImage,
+  MapPin,
 } from 'lucide-react';
 import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
 import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
@@ -24,6 +25,9 @@ interface DirectCameraModalProps {
   onScanError?: (error: ScanErrorInfo) => void;
   title?: string;
   description?: string;
+  scannerTarget?: 'location' | 'material';
+  currentLocation?: string | null;
+  onSwitchLocation?: () => void;
   samples?: { label: string; description?: string; desc?: string; raw?: string; code?: string }[];
 }
 
@@ -34,6 +38,9 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   onScanError,
   title = 'Quét Mã QR Trực Tiếp',
   description = 'Rê camera vào mã QR — Tự động bóc tách & điền vào form tạo phiếu',
+  scannerTarget = 'material',
+  currentLocation,
+  onSwitchLocation,
   samples,
 }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -536,6 +543,37 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 <SwitchCamera className="h-4 w-4" />
               </button>
             </div>
+
+            {/* Quick in-view Location Indicator & Switch Location Button */}
+            {scannerTarget === 'material' && currentLocation && (
+              <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 max-w-[calc(100%-84px)] pointer-events-auto">
+                <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/50 backdrop-blur-md shadow-md text-white text-xs">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-slate-400 text-[10px]">Vị trí:</span>
+                  <span className="font-mono font-bold text-emerald-300 text-xs">{currentLocation}</span>
+                </div>
+                {onSwitchLocation && (
+                  <button
+                    id="btn-scanner-switch-location"
+                    type="button"
+                    onClick={onSwitchLocation}
+                    className="px-2.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-[11px] font-semibold text-slate-200 hover:text-emerald-300 backdrop-blur-md shadow-md transition-colors flex items-center gap-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Đổi vị trí</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {scannerTarget === 'location' && (
+              <div className="absolute top-3 left-3 z-20 flex items-center max-w-[calc(100%-84px)] pointer-events-auto">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 border border-amber-500/50 backdrop-blur-md shadow-md text-amber-300 text-xs font-semibold">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span>Bước 1: Quét mã vị trí kho</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer Guide & Sample Bar */}
