@@ -24,6 +24,7 @@ import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModa
 import { MaterialTicketDetailModal } from './components/MaterialTicketDetailModal';
 import { DirectCameraModal } from './components/DirectCameraModal';
 import { VersionInfoModal } from './components/VersionInfoModal';
+import { ScanErrorModal, ScanErrorInfo } from './components/ScanErrorModal';
 import { LienChauLogo } from './components/LienChauLogo';
 import { Toast } from './components/Toast';
 import { MaterialTicket } from './types';
@@ -50,6 +51,7 @@ export default function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const [scanError, setScanError] = useState<ScanErrorInfo | null>(null);
   const [scannerTarget, setScannerTarget] = useState<'material' | 'location'>('material');
   const [viewingTicket, setViewingTicket] = useState<MaterialTicket | null>(null);
 
@@ -89,20 +91,65 @@ export default function App() {
   // Camera scan success handler
   const handleScanSuccess = (scannedRaw: string) => {
     setIsScannerModalOpen(false); // Hide the camera scanner immediately
-    setIsCreateModalOpen(true);   // Ensure ONLY the ticket creation form is visible
 
     if (scannerTarget === 'material') {
-      setScannedMaterialQr(scannedRaw);
       const parsed = parseMaterialQr(scannedRaw);
-      if (parsed.isValid) {
-        showToast(`Đã quét mã: ${parsed.materialCode}`);
-      } else {
-        showToast('Đã quét mã QR');
+      if (!parsed.isValid) {
+        // HIỂN THỊ POPUP MÔ TẢ LỖI
+        setScanError({
+          type: 'invalid_format',
+          title: 'Mã QR không đúng quy chuẩn',
+          message:
+            parsed.errorReason ||
+            'Mã QR vật tư không đủ 6 trường thông tin hoặc sai định dạng quy chuẩn của Liên Châu.',
+          rawQr: scannedRaw,
+          parsed,
+        });
+        return;
       }
+
+      setScannedMaterialQr(scannedRaw);
+      setIsCreateModalOpen(true);
+      showToast(`Đã quét mã: ${parsed.materialCode}`);
     } else {
-      setScannedLocationQr(scannedRaw);
-      showToast(`Vị trí: ${scannedRaw}`);
+      if (!scannedRaw || !scannedRaw.trim()) {
+        setScanError({
+          type: 'location_error',
+          title: 'Mã vị trí kho không hợp lệ',
+          message: 'Dữ liệu quét vị trí kho bị rỗng hoặc không đọc được.',
+          rawQr: scannedRaw,
+        });
+        return;
+      }
+      setScannedLocationQr(scannedRaw.trim());
+      setIsCreateModalOpen(true);
+      showToast(`Vị trí: ${scannedRaw.trim()}`);
     }
+  };
+
+  // Camera scanner error handler (camera permission or image decode)
+  const handleCameraScanError = (errInfo: ScanErrorInfo) => {
+    setIsScannerModalOpen(false);
+    setScanError(errInfo);
+  };
+
+  // Rescan from error popup
+  const handleRescanFromError = () => {
+    setScanError(null);
+    setIsScannerModalOpen(true);
+  };
+
+  // Continue anyway with partial/raw data
+  const handleContinueAnywayFromError = () => {
+    if (scanError?.rawQr) {
+      if (scannerTarget === 'material') {
+        setScannedMaterialQr(scanError.rawQr);
+      } else {
+        setScannedLocationQr(scanError.rawQr);
+      }
+    }
+    setScanError(null);
+    setIsCreateModalOpen(true);
   };
 
   // Save new material ticket & call MES API: http://mes.lienchau.vn:5092/api/FinishedGoodInventory
@@ -558,6 +605,7 @@ export default function App() {
         onSaveTicket={handleSaveTicket}
         onClearScannedMaterialQr={() => setScannedMaterialQr(null)}
         onClearScannedLocationQr={() => setScannedLocationQr(null)}
+        onShowScanError={(err) => setScanError(err)}
         isSaving={isSaving}
       />
 
@@ -566,6 +614,7 @@ export default function App() {
         isOpen={isScannerModalOpen}
         onClose={() => setIsScannerModalOpen(false)}
         onScanSuccess={handleScanSuccess}
+        onScanError={handleCameraScanError}
         title={
           scannerTarget === 'material'
             ? 'Quét mã QR vật tư'
@@ -600,6 +649,15 @@ export default function App() {
       <VersionInfoModal
         isOpen={isVersionModalOpen}
         onClose={() => setIsVersionModalOpen(false)}
+      />
+
+      {/* MODAL 5: SCAN ERROR POPUP (HIỂN THỊ POPUP MÔ TẢ LỖI KHI QUÉT) */}
+      <ScanErrorModal
+        isOpen={!!scanError}
+        error={scanError}
+        onClose={() => setScanError(null)}
+        onRescan={handleRescanFromError}
+        onContinueAnyway={handleContinueAnywayFromError}
       />
 
       {/* TOAST NOTIFICATION */}

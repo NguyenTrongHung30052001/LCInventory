@@ -10,6 +10,7 @@ import {
   Loader2,
   MapPin,
   FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
 import {
@@ -17,6 +18,7 @@ import {
   SAMPLE_MATERIAL_QRS,
   SAMPLE_WAREHOUSE_LOCATIONS,
 } from '../utils/materialQrParser';
+import { ScanErrorInfo } from './ScanErrorModal';
 
 interface MaterialTicketCreateModalProps {
   isOpen: boolean;
@@ -28,6 +30,7 @@ interface MaterialTicketCreateModalProps {
   onSaveTicket: (ticket: MaterialTicket) => Promise<void> | void;
   onClearScannedMaterialQr: () => void;
   onClearScannedLocationQr: () => void;
+  onShowScanError?: (error: ScanErrorInfo) => void;
   isSaving?: boolean;
 }
 
@@ -41,6 +44,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   onSaveTicket,
   onClearScannedMaterialQr,
   onClearScannedLocationQr,
+  onShowScanError,
   isSaving = false,
 }) => {
   const [rawQr, setRawQr] = useState('');
@@ -251,11 +255,32 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     {s.label}
                   </button>
                 ))}
-                {isParsed && (
+                {isParsed ? (
                   <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
                     <CheckCircle2 className="h-3 w-3" /> Đã bóc tách 6 trường
                   </span>
-                )}
+                ) : rawQr ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const parsed = parseMaterialQr(rawQr);
+                      if (onShowScanError) {
+                        onShowScanError({
+                          type: 'invalid_format',
+                          title: 'Mã QR không đúng quy chuẩn',
+                          message:
+                            parsed.errorReason ||
+                            'Mã QR không đủ 6 trường thông tin quy chuẩn của Liên Châu.',
+                          rawQr,
+                          parsed,
+                        });
+                      }
+                    }}
+                    className="ml-auto inline-flex items-center gap-1 text-[10px] text-rose-600 dark:text-rose-400 font-bold hover:underline"
+                  >
+                    <AlertTriangle className="h-3 w-3" /> Lỗi định dạng (Xem chi tiết)
+                  </button>
+                ) : null}
               </div>
             </div>
 

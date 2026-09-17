@@ -15,11 +15,13 @@ import {
 } from 'lucide-react';
 import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
 import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
+import { ScanErrorInfo } from './ScanErrorModal';
 
 interface DirectCameraModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScanSuccess: (rawQrData: string) => void;
+  onScanError?: (error: ScanErrorInfo) => void;
   title?: string;
   description?: string;
   samples?: { label: string; description?: string; desc?: string; raw?: string; code?: string }[];
@@ -29,6 +31,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   isOpen,
   onClose,
   onScanSuccess,
+  onScanError,
   title = 'Quét Mã QR Trực Tiếp',
   description = 'Rê camera vào mã QR — Tự động bóc tách & điền vào form tạo phiếu',
   samples,
@@ -268,17 +271,34 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
         const url = event.target?.result as string;
         try {
           const decoded = await decodeImageFile(url);
-          if (decoded && decoded.data) {
+          if (decoded && decoded.data && decoded.data.trim()) {
             playSuccessChime();
             hasTriggeredRef.current = true;
             stopCamera();
             onScanSuccess(decoded.data);
             onClose();
           } else {
-            alert('Không tìm thấy mã QR trong ảnh vừa chọn.');
+            if (onScanError) {
+              onClose();
+              onScanError({
+                type: 'decode_failed',
+                title: 'Không tìm thấy mã QR trong ảnh',
+                message:
+                  'Hệ thống đã quét hình ảnh nhưng không phát hiện mã QR nào. Vui lòng chụp rõ nét, cận cảnh tem QR và đảm bảo đủ ánh sáng.',
+              });
+            }
           }
-        } catch {
-          alert('Không thể phân tích ảnh mã QR.');
+        } catch (err: any) {
+          if (onScanError) {
+            onClose();
+            onScanError({
+              type: 'decode_failed',
+              title: 'Lỗi phân tích hình ảnh',
+              message:
+                err?.message ||
+                'Không thể đọc dữ liệu từ tệp hình ảnh vừa chọn. Vui lòng thử lại với hình ảnh khác.',
+            });
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -371,11 +391,31 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                     id="btn-retry-scanner-cam"
                     type="button"
                     onClick={startCamera}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-md transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-md transition-colors"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Thử lại Camera
                   </button>
+
+                  {cameraError && onScanError && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onScanError({
+                          type: 'camera_permission',
+                          title: 'Không thể truy cập máy ảnh (Camera)',
+                          message:
+                            cameraError ||
+                            'Bạn chưa cấp quyền truy cập Camera cho trình duyệt hoặc thiết bị không tìm thấy camera.',
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-xs font-medium text-rose-200 border border-rose-800 transition-colors"
+                    >
+                      <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
+                      Mô tả lỗi
+                    </button>
+                  )}
 
                   <button
                     type="button"
