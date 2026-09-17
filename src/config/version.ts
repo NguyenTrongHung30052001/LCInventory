@@ -15,12 +15,12 @@ export interface AppVersionInfo {
 }
 
 export const APP_VERSION: AppVersionInfo = {
-  version: 'v1.2.1',
-  buildNumber: '20260917.03',
-  updatedAt: '17/09/2026 15:50',
+  version: 'v1.3.0',
+  buildNumber: '20260917.04',
+  updatedAt: '17/09/2026 16:15',
   updatedDate: '17/09/2026',
-  updatedTime: '15:50:00',
+  updatedTime: '16:15:00',
   author: 'Liên Châu MES Team',
-  releaseNotes: 'Bổ sung Vercel Serverless Functions (/api/FinishedGoodInventory) và vercel.json xử lý lỗi 404 khi deploy Vercel',
+  releaseNotes: 'Tích hợp API sửa (PUT), xóa (DELETE), và tải danh sách kiểm kê theo người quét (GET by-user)',
   mesApi: 'http://mes.lienchau.vn:5092/api/FinishedGoodInventory',
 };

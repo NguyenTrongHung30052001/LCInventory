@@ -12,6 +12,7 @@ import {
   Send,
   Warehouse,
   User,
+  Edit3,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
 
@@ -19,6 +20,7 @@ interface MaterialTicketDetailModalProps {
   ticket: MaterialTicket | null;
   onClose: () => void;
   onDeleteTicket: (id: string) => void;
+  onEditTicket?: (ticket: MaterialTicket) => void;
   onCopyText: (text: string) => void;
   onResendToMes?: (ticket: MaterialTicket) => void;
 }
@@ -27,6 +29,7 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
   ticket,
   onClose,
   onDeleteTicket,
+  onEditTicket,
   onCopyText,
   onResendToMes,
 }) => {
@@ -249,14 +252,30 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               <span>Xóa phiếu</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span>In phiếu</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {onEditTicket && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onEditTicket(ticket);
+                  }}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 flex items-center gap-1.5 transition-colors"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  <span>Sửa</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>In phiếu</span>
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>

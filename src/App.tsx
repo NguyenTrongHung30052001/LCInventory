@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Camera,
-  Plus,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -15,13 +14,17 @@ import {
   Eye,
   Trash2,
   MapPin,
-  Download,
   X,
   FileText,
+  Edit3,
+  RefreshCw,
+  Loader2,
+  User,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
 import { MaterialTicketDetailModal } from './components/MaterialTicketDetailModal';
+import { EditInventoryModal } from './components/EditInventoryModal';
 import { DirectCameraModal } from './components/DirectCameraModal';
 import { VersionInfoModal } from './components/VersionInfoModal';
 import { ScanErrorModal, ScanErrorInfo } from './components/ScanErrorModal';
@@ -30,21 +33,23 @@ import { Toast } from './components/Toast';
 import { MaterialTicket } from './types';
 import { APP_VERSION } from './config/version';
 import {
-  getStoredMaterialTickets,
-  saveStoredMaterialTickets,
-} from './utils/materialTicketStorage';
-import {
   SAMPLE_MATERIAL_QRS,
   SAMPLE_WAREHOUSE_LOCATIONS,
   parseMaterialQr,
 } from './utils/materialQrParser';
-import { sendToMesInventory } from './services/mesApi';
+import {
+  sendToMesInventory,
+  fetchInventoryByUser,
+  updateInventoryItem,
+  deleteInventoryItem,
+} from './services/mesApi';
 
 export default function App() {
-  // Stored Material Tickets - Mặc định danh sách trống (không có đơn ảo)
-  const [tickets, setTickets] = useState<MaterialTicket[]>(() =>
-    getStoredMaterialTickets()
-  );
+  // Inventory items loaded directly from MES API by scannedBy ID (bảng danh sách chỉ lấy danh sách trong API)
+  const [tickets, setTickets] = useState<MaterialTicket[]>([]);
+  const [scannedByUserId, setScannedByUserId] = useState<string>('105');
+  const [isLoadingList, setIsLoadingList] = useState<boolean>(true);
+  const [listError, setListError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal states
@@ -54,6 +59,7 @@ export default function App() {
   const [scanError, setScanError] = useState<ScanErrorInfo | null>(null);
   const [scannerTarget, setScannerTarget] = useState<'material' | 'location'>('material');
   const [viewingTicket, setViewingTicket] = useState<MaterialTicket | null>(null);
+  const [editingTicket, setEditingTicket] = useState<MaterialTicket | null>(null);
 
   // Scanned QR values passed into create modal
   const [scannedMaterialQr, setScannedMaterialQr] = useState<string | null>(null);
@@ -64,17 +70,38 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Persist tickets to local storage
-  useEffect(() => {
-    saveStoredMaterialTickets(tickets);
-  }, [tickets]);
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
     }, 3200);
   };
+
+  // Fetch inventory list from MES API: GET /api/FinishedGoodInventory/by-user/{scannedBy}
+  const loadInventory = useCallback(
+    async (userId: string = scannedByUserId) => {
+      setIsLoadingList(true);
+      setListError(null);
+      try {
+        const res = await fetchInventoryByUser(userId);
+        if (res.success) {
+          setTickets(res.data);
+        } else {
+          setListError(res.error || 'Không thể tải danh sách kiểm kê');
+        }
+      } catch (err: any) {
+        setListError(err.message || 'Lỗi kết nối máy chủ MES');
+      } finally {
+        setIsLoadingList(false);
+      }
+    },
+    [scannedByUserId]
+  );
+
+  // Load inventory on initial mount and when user ID changes
+  useEffect(() => {
+    loadInventory(scannedByUserId);
+  }, [loadInventory, scannedByUserId]);
 
   // Open camera scanner for Material QR
   const handleOpenMaterialScanner = () => {
@@ -90,12 +117,11 @@ export default function App() {
 
   // Camera scan success handler
   const handleScanSuccess = (scannedRaw: string) => {
-    setIsScannerModalOpen(false); // Hide the camera scanner immediately
+    setIsScannerModalOpen(false);
 
     if (scannerTarget === 'material') {
       const parsed = parseMaterialQr(scannedRaw);
       if (!parsed.isValid) {
-        // HIỂN THỊ POPUP MÔ TẢ LỖI
         setScanError({
           type: 'invalid_format',
           title: 'Mã QR không đúng quy chuẩn',
@@ -127,19 +153,17 @@ export default function App() {
     }
   };
 
-  // Camera scanner error handler (camera permission or image decode)
+  // Camera scanner error handler
   const handleCameraScanError = (errInfo: ScanErrorInfo) => {
     setIsScannerModalOpen(false);
     setScanError(errInfo);
   };
 
-  // Rescan from error popup
   const handleRescanFromError = () => {
     setScanError(null);
     setIsScannerModalOpen(true);
   };
 
-  // Continue anyway with partial/raw data
   const handleContinueAnywayFromError = () => {
     if (scanError?.rawQr) {
       if (scannerTarget === 'material') {
@@ -152,36 +176,90 @@ export default function App() {
     setIsCreateModalOpen(true);
   };
 
-  // Save new material ticket & call MES API: http://mes.lienchau.vn:5092/api/FinishedGoodInventory
+  // Save new material ticket & call MES API: POST /api/FinishedGoodInventory
   const handleSaveTicket = async (newTicket: MaterialTicket) => {
     setIsSaving(true);
     try {
-      const mesRes = await sendToMesInventory(newTicket);
-      const savedTicket: MaterialTicket = {
+      const ticketToSave: MaterialTicket = {
         ...newTicket,
-        mesSyncStatus: mesRes.success ? 'synced' : 'failed',
-        mesSyncError: mesRes.error,
+        scannedBy: scannedByUserId,
       };
 
-      setTickets((prev) => [savedTicket, ...prev]);
+      const mesRes = await sendToMesInventory(ticketToSave);
       setScannedMaterialQr(null);
       setScannedLocationQr(null);
 
       if (mesRes.success) {
-        showToast(`Đã lưu & gửi MES thành công!`);
+        showToast('Đã lưu & gửi MES thành công!');
       } else {
-        showToast(`Đã lưu phiếu (Lỗi gửi MES: ${mesRes.error || 'Kiểm tra mạng'})`);
+        showToast(`Đã tạo phiếu (Lỗi gửi MES: ${mesRes.error || 'Kiểm tra mạng'})`);
       }
+      // Re-fetch directly from MES API
+      await loadInventory(scannedByUserId);
     } catch (err: any) {
-      const savedTicket: MaterialTicket = {
-        ...newTicket,
-        mesSyncStatus: 'failed',
-        mesSyncError: err.message || 'Lỗi gửi dữ liệu',
-      };
-      setTickets((prev) => [savedTicket, ...prev]);
-      showToast(`Đã lưu nội bộ (Không gửi được MES)`);
+      showToast(`Lỗi gửi dữ liệu: ${err.message || 'Không thể kết nối'}`);
+      await loadInventory(scannedByUserId);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Edit ticket: PUT /api/FinishedGoodInventory/{id}
+  const handleSaveEdit = async (
+    id: string,
+    updatedData: { quantity: number; unit: string; note: string }
+  ): Promise<boolean> => {
+    try {
+      const res = await updateInventoryItem(id, updatedData);
+      if (res.success) {
+        showToast(res.message || 'Đã cập nhật bản ghi kiểm kê thành công');
+        // Update viewing ticket if open
+        if (viewingTicket?.id === id) {
+          setViewingTicket((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  quantity: updatedData.quantity,
+                  unit: updatedData.unit,
+                  notes: updatedData.note,
+                }
+              : null
+          );
+        }
+        // Re-fetch directly from MES API
+        await loadInventory(scannedByUserId);
+        return true;
+      } else {
+        showToast(`Cập nhật thất bại: ${res.error || 'Lỗi không xác định'}`);
+        return false;
+      }
+    } catch (err: any) {
+      showToast(`Lỗi cập nhật: ${err.message || 'Không thể kết nối'}`);
+      return false;
+    }
+  };
+
+  // Delete ticket: DELETE /api/FinishedGoodInventory/{id}
+  const handleDeleteTicket = async (id: string) => {
+    const confirmDelete = window.confirm(
+      `Bạn có chắc chắn muốn xóa bản ghi kiểm kê ID #${id} khỏi hệ thống MES không?`
+    );
+    if (!confirmDelete) return;
+
+    showToast(`Đang xóa bản ghi #${id}...`);
+    try {
+      const res = await deleteInventoryItem(id);
+      if (res.success) {
+        showToast(res.message || 'Đã xóa bản ghi kiểm kê thành công');
+        if (viewingTicket?.id === id) {
+          setViewingTicket(null);
+        }
+        await loadInventory(scannedByUserId);
+      } else {
+        showToast(`Xóa thất bại: ${res.error || 'Lỗi không xác định'}`);
+      }
+    } catch (err: any) {
+      showToast(`Lỗi khi xóa: ${err.message || 'Không thể kết nối'}`);
     }
   };
 
@@ -190,30 +268,12 @@ export default function App() {
     showToast('Đang gửi lại lên hệ thống MES...');
     const mesRes = await sendToMesInventory(ticket);
 
-    setTickets((prev) =>
-      prev.map((t) => {
-        if (t.id === ticket.id) {
-          return {
-            ...t,
-            mesSyncStatus: mesRes.success ? 'synced' : 'failed',
-            mesSyncError: mesRes.error,
-          };
-        }
-        return t;
-      })
-    );
-
     if (mesRes.success) {
       showToast('Đã gửi MES thành công!');
+      await loadInventory(scannedByUserId);
     } else {
       showToast(`Gửi lại thất bại: ${mesRes.error || 'Lỗi'}`);
     }
-  };
-
-  // Delete ticket
-  const handleDeleteTicket = (id: string) => {
-    setTickets((prev) => prev.filter((t) => t.id !== id));
-    showToast('Đã xóa phiếu');
   };
 
   // Copy text helper
@@ -232,6 +292,7 @@ export default function App() {
     }
 
     const headers = [
+      'ID',
       'Mã vật tư',
       'Màu',
       'Size',
@@ -249,6 +310,7 @@ export default function App() {
     ];
 
     const rows = tickets.map((t) => [
+      `"${t.id}"`,
       `"${(t.materialCode || '').replace(/"/g, '""')}"`,
       `"${(t.color || '').replace(/"/g, '""')}"`,
       `"${(t.size || '').replace(/"/g, '""')}"`,
@@ -256,42 +318,43 @@ export default function App() {
       `"${(t.batchNumber || '').replace(/"/g, '""')}"`,
       `"${(t.productionOrder || '').replace(/"/g, '""')}"`,
       `"${(t.unit || '').replace(/"/g, '""')}"`,
-      t.quantity,
+      `"${t.quantity}"`,
       `"${(t.warehouseLocation || '').replace(/"/g, '""')}"`,
       `"${(t.warehouseCode || 'FGW').replace(/"/g, '""')}"`,
       `"${(t.scannedBy || '105').replace(/"/g, '""')}"`,
       `"${(t.notes || '').replace(/"/g, '""')}"`,
-      t.mesSyncStatus === 'synced' ? 'Đã gửi MES' : 'Chưa gửi',
-      new Date(t.createdAt).toLocaleString('vi-VN'),
+      `"${t.mesSyncStatus || 'synced'}"`,
+      `"${new Date(t.createdAt).toLocaleString('vi-VN')}"`,
     ]);
 
     const csvContent =
-      '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      '\uFEFF' +
+      [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `phieu-kho-mes-${Date.now()}.csv`);
-    document.body.appendChild(link);
+    link.download = `MES_KiemKe_${scannedByUserId}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    document.body.removeChild(link);
-    showToast('Đã tải file CSV');
+    URL.revokeObjectURL(url);
+    showToast('Đã tải xuống file CSV');
   };
 
-  // Filtered tickets by search
+  // Filtered tickets by search term
   const filteredTickets = tickets.filter((t) => {
-    const q = searchTerm.toLowerCase().trim();
-    if (!q) return true;
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
     return (
-      t.materialCode.toLowerCase().includes(q) ||
-      t.color.toLowerCase().includes(q) ||
-      t.size.toLowerCase().includes(q) ||
-      t.length.toLowerCase().includes(q) ||
-      t.batchNumber.toLowerCase().includes(q) ||
-      t.productionOrder.toLowerCase().includes(q) ||
-      t.warehouseLocation.toLowerCase().includes(q) ||
-      (t.notes && t.notes.toLowerCase().includes(q)) ||
-      t.rawQr.toLowerCase().includes(q)
+      t.id.toLowerCase().includes(term) ||
+      (t.materialCode && t.materialCode.toLowerCase().includes(term)) ||
+      (t.color && t.color.toLowerCase().includes(term)) ||
+      (t.size && t.size.toLowerCase().includes(term)) ||
+      (t.length && t.length.toLowerCase().includes(term)) ||
+      (t.batchNumber && t.batchNumber.toLowerCase().includes(term)) ||
+      (t.productionOrder && t.productionOrder.toLowerCase().includes(term)) ||
+      (t.warehouseLocation && t.warehouseLocation.toLowerCase().includes(term)) ||
+      (t.notes && t.notes.toLowerCase().includes(term))
     );
   });
 
@@ -345,41 +408,97 @@ export default function App() {
 
       {/* Main Mobile Screen */}
       <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
-        {/* SEARCH INPUT */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            id="input-mobile-search"
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm mã VT, màu, size, lô, kho, ghi chú..."
-            className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
-          />
-          {searchTerm && (
+        {/* SEARCH INPUT & API USER FILTER */}
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              id="input-mobile-search"
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm mã VT, màu, size, lô, kho, ghi chú..."
+              className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* User ID Indicator & Refresh Bar */}
+          <div className="flex items-center justify-between px-1 text-xs">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <User className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Người quét:</span>
+              <input
+                type="text"
+                value={scannedByUserId}
+                onChange={(e) => setScannedByUserId(e.target.value)}
+                onBlur={() => loadInventory(scannedByUserId)}
+                onKeyDown={(e) => e.key === 'Enter' && loadInventory(scannedByUserId)}
+                className="h-6 w-16 px-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                title="Bấm để đổi ID người quét và tải lại danh sách"
+              />
+              <span className="text-[11px] text-slate-400 font-mono">
+                ({tickets.length} phiếu)
+              </span>
+            </div>
+
             <button
               type="button"
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+              onClick={() => loadInventory(scannedByUserId)}
+              disabled={isLoadingList}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-colors disabled:opacity-50"
+              title="Tải lại danh sách từ máy chủ MES"
             >
-              <X className="h-3.5 w-3.5" />
+              <RefreshCw
+                className={`h-3 w-3 ${isLoadingList ? 'animate-spin text-emerald-600' : ''}`}
+              />
+              <span>Làm mới</span>
             </button>
-          )}
+          </div>
         </div>
 
-        {/* 4. TICKET CARDS LIST (MOBILE OPTIMIZED) - Không có đơn ảo, mặc định để trống */}
+        {/* API Error Notification */}
+        {listError && (
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+            <span>{listError}</span>
+            <button
+              type="button"
+              onClick={() => loadInventory(scannedByUserId)}
+              className="text-[11px] font-bold underline shrink-0 hover:text-amber-950 dark:hover:text-amber-100"
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {/* TICKET CARDS LIST (MOBILE OPTIMIZED) - CHỈ LẤY DANH SÁCH TỪ API */}
         <div className="space-y-2.5 pt-1">
-          {filteredTickets.length === 0 ? (
+          {isLoadingList && tickets.length === 0 ? (
+            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
+              <p className="text-xs text-slate-500">
+                Đang tải danh sách kiểm kê từ MES (ID: {scannedByUserId})...
+              </p>
+            </div>
+          ) : filteredTickets.length === 0 ? (
             /* Empty State with Lien Chau Branding */
             <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
               <div className="mb-3">
                 <LienChauLogo size="lg" />
               </div>
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
-                Chưa có phiếu vật tư
+                Chưa có phiếu vật tư cho người quét #{scannedByUserId}
               </p>
               <p className="text-[11px] text-slate-400 mb-4 max-w-xs">
-                Đưa camera quét mã QR trên cuộn vải/vật tư để tự động nhập dữ liệu vào phiếu.
+                Đưa camera quét mã QR trên cuộn vải/vật tư để tạo và gửi dữ liệu vào MES.
               </p>
               <button
                 type="button"
@@ -402,9 +521,12 @@ export default function App() {
                 onClick={() => setViewingTicket(t)}
                 className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500/60 active:scale-[0.99] transition-all cursor-pointer space-y-2"
               >
-                {/* Card Top: Material Code, MES Status & Time (Bỏ mã phiếu & trạng thái) */}
+                {/* Card Top: Item ID, MES Status & Time */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-[11px]">
+                      #{t.id}
+                    </span>
                     {getMesBadge(t.mesSyncStatus)}
                   </div>
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -429,31 +551,41 @@ export default function App() {
                 {/* 6 Fields Compact Summary Grid */}
                 <div className="grid grid-cols-3 gap-1.5 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80">
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Màu:</span>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                      Màu:
+                    </span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
                       {t.color || '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Size:</span>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                      Size:
+                    </span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
                       {t.size || '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Length:</span>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                      Length:
+                    </span>
                     <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
                       {t.length || '—'}
                     </span>
                   </div>
                   <div className="col-span-1">
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Lô SX:</span>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                      Lô SX:
+                    </span>
                     <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
                       {t.batchNumber || '—'}
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Lệnh SX:</span>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                      Lệnh SX:
+                    </span>
                     <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
                       {t.productionOrder || '—'}
                     </span>
@@ -485,11 +617,31 @@ export default function App() {
                     </span>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions: Edit, Delete, Copy, Detail */}
                   <div
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {/* Nút Sửa: Chỉ sửa đơn vị tính, số lượng, ghi chú */}
+                    <button
+                      type="button"
+                      onClick={() => setEditingTicket(t)}
+                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+                      title="Chỉnh sửa (ĐVT, số lượng, ghi chú)"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+
+                    {/* Nút Xóa: Gọi API DELETE /api/FinishedGoodInventory/{id} */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTicket(t.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
+                      title="Xóa dòng kiểm kê trên MES"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleCopyText(t.rawQr || t.materialCode)}
@@ -498,18 +650,11 @@ export default function App() {
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTicket(t.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600"
-                      title="Xóa"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+
                     <button
                       type="button"
                       onClick={() => setViewingTicket(t)}
-                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"
                       title="Chi tiết"
                     >
                       <Eye className="h-3.5 w-3.5" />
@@ -528,17 +673,11 @@ export default function App() {
             onClick={() => setIsVersionModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 transition-colors shadow-2xs group"
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-slate-700 dark:text-slate-200">
-              Liên Châu MES
-            </span>
-            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 rounded">
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
               {APP_VERSION.version}
             </span>
             <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="font-mono text-[10px]">
-              Cập nhật: {APP_VERSION.updatedAt}
-            </span>
+            <span>Cập nhật: {APP_VERSION.updatedAt}</span>
           </button>
         </div>
       </main>
@@ -590,17 +729,26 @@ export default function App() {
         ticket={viewingTicket}
         onClose={() => setViewingTicket(null)}
         onDeleteTicket={handleDeleteTicket}
+        onEditTicket={(ticket) => setEditingTicket(ticket)}
         onCopyText={handleCopyText}
         onResendToMes={handleResendToMes}
       />
 
-      {/* MODAL 4: VERSION INFO MODAL */}
+      {/* MODAL 4: EDIT INVENTORY MODAL (PUT API) */}
+      <EditInventoryModal
+        isOpen={!!editingTicket}
+        ticket={editingTicket}
+        onClose={() => setEditingTicket(null)}
+        onSave={handleSaveEdit}
+      />
+
+      {/* MODAL 5: VERSION INFO MODAL */}
       <VersionInfoModal
         isOpen={isVersionModalOpen}
         onClose={() => setIsVersionModalOpen(false)}
       />
 
-      {/* MODAL 5: SCAN ERROR POPUP (HIỂN THỊ POPUP MÔ TẢ LỖI KHI QUÉT) */}
+      {/* MODAL 6: SCAN ERROR POPUP */}
       <ScanErrorModal
         isOpen={!!scanError}
         error={scanError}

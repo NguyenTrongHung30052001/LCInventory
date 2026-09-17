@@ -14,6 +14,7 @@ export interface MesInventoryPayload {
   productionOrder: string;
   unit: string;
   quantity: number;
+  note?: string;
   notes?: string;
 }
 
@@ -24,17 +25,24 @@ export interface MesApiResponse {
   error?: string;
 }
 
+function getApiBase(): string {
+  const metaEnv = (import.meta as any)?.env;
+  return metaEnv?.VITE_API_BASE_URL
+    ? String(metaEnv.VITE_API_BASE_URL).replace(/\/$/, '')
+    : '';
+}
+
 /**
  * Sends finished good inventory ticket data to MES API:
  * POST http://mes.lienchau.vn:5092/api/FinishedGoodInventory
- *
- * Uses the internal /api/FinishedGoodInventory proxy to prevent CORS and Mixed Content issues.
  */
 export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApiResponse> {
   const numericQty =
     typeof ticket.quantity === 'number'
       ? ticket.quantity
       : parseFloat(String(ticket.quantity)) || 0;
+
+  const noteVal = ticket.notes?.trim() || '';
 
   const payload: MesInventoryPayload = {
     warehouseCode: ticket.warehouseCode?.trim() || 'FGW',
@@ -50,17 +58,14 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     productionOrder: ticket.productionOrder || '',
     unit: ticket.unit || 'Cuộn',
     quantity: numericQty,
-    notes: ticket.notes || '',
+    note: noteVal,
+    notes: noteVal,
   };
 
-  // Attempt 1: Call through internal proxy /api/FinishedGoodInventory (works on Cloud Run & Vercel Serverless)
-  try {
-    const metaEnv = (import.meta as any)?.env;
-    const apiBase = metaEnv?.VITE_API_BASE_URL
-      ? String(metaEnv.VITE_API_BASE_URL).replace(/\/$/, '')
-      : '';
-    const proxyUrl = apiBase ? `${apiBase}/api/FinishedGoodInventory` : '/api/FinishedGoodInventory';
+  const apiBase = getApiBase();
+  const proxyUrl = apiBase ? `${apiBase}/api/FinishedGoodInventory` : '/api/FinishedGoodInventory';
 
+  try {
     const response = await fetch(proxyUrl, {
       method: 'POST',
       headers: {
@@ -71,7 +76,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && (resJson?.success !== false)) {
+    if (response.ok && resJson?.success !== false) {
       return {
         success: true,
         message: 'Đã gửi thành công lên hệ thống MES',
@@ -81,7 +86,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
       let errMsg = resJson?.error || resJson?.message;
       if (response.status === 404) {
         const host = typeof window !== 'undefined' ? window.location.host : '';
-        errMsg = `Không tìm thấy API ${proxyUrl} (Lỗi 404). Nếu bạn đang mở trên Vercel (${host}), vui lòng đồng bộ (deploy) bản code mới nhất chứa thư mục /api serverless function để Vercel kích hoạt proxy.`;
+        errMsg = `Không tìm thấy API ${proxyUrl} (Lỗi 404).`;
       } else if (!errMsg) {
         errMsg = `Máy chủ MES trả về mã ${response.status}`;
       }
@@ -94,8 +99,6 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     }
   } catch (err: any) {
     console.warn('Proxy request failed, attempting direct fetch fallback...', err);
-
-    // Attempt 2: Direct fetch to http://mes.lienchau.vn:5092/api/FinishedGoodInventory (if allowed)
     try {
       const directRes = await fetch('http://mes.lienchau.vn:5092/api/FinishedGoodInventory', {
         method: 'POST',
@@ -127,14 +130,238 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
         };
       }
     } catch (directErr: any) {
-      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      const reason = isHttps
-        ? `Trình duyệt chặn kết nối trực tiếp đến http://mes.lienchau.vn:5092 do quy định bảo mật HTTPS (Mixed Content). Vui lòng đảm bảo serverless API /api/FinishedGoodInventory đã được kích hoạt trên Vercel.`
-        : `Không thể kết nối đến máy chủ MES: ${directErr.message || err.message}`;
-
       return {
         success: false,
-        error: reason,
+        error: `Không thể kết nối đến máy chủ MES: ${directErr.message || err.message}`,
+      };
+    }
+  }
+}
+
+/**
+ * GET list of inventory items by scannedBy ID:
+ * GET http://mes.lienchau.vn:5092/api/FinishedGoodInventory/by-user/{scannedBy}
+ */
+export async function fetchInventoryByUser(
+  scannedBy: string = '105'
+): Promise<{ success: boolean; data: MaterialTicket[]; error?: string }> {
+  const apiBase = getApiBase();
+  const proxyUrl = apiBase
+    ? `${apiBase}/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`
+    : `/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`;
+
+  const transformItems = (items: any[]): MaterialTicket[] => {
+    return items.map((item) => ({
+      id: String(item.id),
+      createdAt: item.createdAt
+        ? new Date(item.createdAt).getTime()
+        : item.scannedAt
+        ? new Date(item.scannedAt).getTime()
+        : Date.now(),
+      rawQr: item.qrCode || '',
+      materialCode: item.materialCode || '',
+      color: item.color || '',
+      size: item.size || '',
+      length: item.length || '',
+      batchNumber: item.lotNumber || '',
+      productionOrder: item.productionOrder || '',
+      unit: item.unit || 'Cuộn',
+      quantity: typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity) || 1,
+      warehouseLocation: item.location || '',
+      warehouseCode: item.warehouseCode || 'FGW',
+      scannedBy: String(item.scannedBy || scannedBy),
+      notes: item.note || '',
+      mesSyncStatus: 'synced',
+    }));
+  };
+
+  try {
+    const response = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    const resJson = await response.json().catch(() => null);
+
+    if (response.ok && resJson?.success !== false) {
+      const list = Array.isArray(resJson?.data) ? resJson.data : [];
+      return {
+        success: true,
+        data: transformItems(list),
+      };
+    } else {
+      return {
+        success: false,
+        data: [],
+        error: resJson?.error || resJson?.message || `Lỗi tải danh sách (mã ${response.status})`,
+      };
+    }
+  } catch (err: any) {
+    console.warn('Proxy fetch by-user failed, fallback to direct fetch...', err);
+    try {
+      const directRes = await fetch(
+        `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/by-user/${encodeURIComponent(scannedBy)}`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+      const directJson = await directRes.json();
+      if (directRes.ok && directJson?.success !== false) {
+        const list = Array.isArray(directJson?.data) ? directJson.data : [];
+        return {
+          success: true,
+          data: transformItems(list),
+        };
+      }
+      return {
+        success: false,
+        data: [],
+        error: directJson?.error || directJson?.message || `Lỗi tải danh sách (mã ${directRes.status})`,
+      };
+    } catch (directErr: any) {
+      return {
+        success: false,
+        data: [],
+        error: `Không thể kết nối MES: ${directErr.message || err.message}`,
+      };
+    }
+  }
+}
+
+/**
+ * PUT update inventory item:
+ * PUT http://mes.lienchau.vn:5092/api/FinishedGoodInventory/{id}
+ * Body: { quantity, unit, note }
+ */
+export async function updateInventoryItem(
+  id: string | number,
+  data: { quantity: number; unit: string; note: string }
+): Promise<MesApiResponse> {
+  const apiBase = getApiBase();
+  const proxyUrl = apiBase
+    ? `${apiBase}/api/FinishedGoodInventory/${encodeURIComponent(id)}`
+    : `/api/FinishedGoodInventory/${encodeURIComponent(id)}`;
+
+  const bodyData = {
+    quantity: Number(data.quantity),
+    unit: String(data.unit || 'Cuộn'),
+    note: String(data.note || ''),
+  };
+
+  try {
+    const response = await fetch(proxyUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(bodyData),
+    });
+
+    const resJson = await response.json().catch(() => null);
+
+    if (response.ok && resJson?.success !== false) {
+      return {
+        success: true,
+        message: resJson?.message || 'Đã cập nhật bản ghi kiểm kê thành công',
+        data: resJson?.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: resJson?.error || resJson?.message || `Lỗi cập nhật (mã ${response.status})`,
+      };
+    }
+  } catch (err: any) {
+    console.warn('Proxy update failed, fallback to direct fetch...', err);
+    try {
+      const directRes = await fetch(
+        `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bodyData),
+        }
+      );
+      const directJson = await directRes.json().catch(() => null);
+      if (directRes.ok && directJson?.success !== false) {
+        return {
+          success: true,
+          message: directJson?.message || 'Đã cập nhật bản ghi thành công',
+          data: directJson,
+        };
+      }
+      return {
+        success: false,
+        error: directJson?.error || directJson?.message || `Lỗi cập nhật (mã ${directRes.status})`,
+      };
+    } catch (directErr: any) {
+      return {
+        success: false,
+        error: `Không thể kết nối máy chủ MES: ${directErr.message || err.message}`,
+      };
+    }
+  }
+}
+
+/**
+ * DELETE inventory item:
+ * DELETE http://mes.lienchau.vn:5092/api/FinishedGoodInventory/{id}
+ */
+export async function deleteInventoryItem(id: string | number): Promise<MesApiResponse> {
+  const apiBase = getApiBase();
+  const proxyUrl = apiBase
+    ? `${apiBase}/api/FinishedGoodInventory/${encodeURIComponent(id)}`
+    : `/api/FinishedGoodInventory/${encodeURIComponent(id)}`;
+
+  try {
+    const response = await fetch(proxyUrl, {
+      method: 'DELETE',
+    });
+
+    const resJson = await response.json().catch(() => null);
+
+    if (response.ok && resJson?.success !== false) {
+      return {
+        success: true,
+        message: resJson?.message || 'Đã xóa bản ghi kiểm kê thành công',
+      };
+    } else {
+      return {
+        success: false,
+        error: resJson?.error || resJson?.message || `Lỗi xóa (mã ${response.status})`,
+      };
+    }
+  } catch (err: any) {
+    console.warn('Proxy delete failed, fallback to direct fetch...', err);
+    try {
+      const directRes = await fetch(
+        `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+      const directJson = await directRes.json().catch(() => null);
+      if (directRes.ok && directJson?.success !== false) {
+        return {
+          success: true,
+          message: directJson?.message || 'Đã xóa bản ghi kiểm kê thành công',
+        };
+      }
+      return {
+        success: false,
+        error: directJson?.error || directJson?.message || `Lỗi xóa (mã ${directRes.status})`,
+      };
+    } catch (directErr: any) {
+      return {
+        success: false,
+        error: `Không thể kết nối máy chủ MES: ${directErr.message || err.message}`,
       };
     }
   }
