@@ -4,36 +4,20 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
-  FilePlus2,
   Camera,
-  QrCode,
+  Plus,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
   Ban,
   Copy,
   Eye,
   Trash2,
-  Sparkles,
-  ArrowRight,
-  Printer,
-  Layers,
-  FileCheck,
-  Zap,
-  Package,
-  Palette,
-  Maximize2,
-  Ruler,
-  Boxes,
-  ClipboardList,
   MapPin,
-  Table as TableIcon,
-  LayoutGrid,
   Download,
-  Check,
+  Package,
+  X,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
@@ -59,7 +43,6 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,7 +67,7 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3000);
+    }, 2800);
   };
 
   // Open camera scanner for Material QR
@@ -108,16 +91,13 @@ export default function App() {
       setScannedMaterialQr(scannedRaw);
       const parsed = parseMaterialQr(scannedRaw);
       if (parsed.isValid) {
-        showToast(
-          `Đã quét & tách 6 trường (${parsed.delimiterUsed === '^^' ? 'Dấu ^^' : 'Dấu -'}): ${parsed.materialCode}`
-        );
+        showToast(`Đã quét mã: ${parsed.materialCode}`);
       } else {
-        showToast('Đã nhận diện mã QR vật tư!');
+        showToast('Đã quét mã QR');
       }
     } else {
-      // Warehouse location: raw string without parsing
       setScannedLocationQr(scannedRaw);
-      showToast(`Đã nhận diện vị trí kho: ${scannedRaw}`);
+      showToast(`Vị trí: ${scannedRaw}`);
     }
   };
 
@@ -126,13 +106,13 @@ export default function App() {
     setTickets((prev) => [newTicket, ...prev]);
     setScannedMaterialQr(null);
     setScannedLocationQr(null);
-    showToast(`Đã tạo thành công phiếu ${newTicket.code} (${newTicket.materialCode})!`);
+    showToast(`Đã lưu phiếu ${newTicket.code}`);
   };
 
   // Delete ticket
   const handleDeleteTicket = (id: string) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
-    showToast('Đã xóa phiếu vật tư.');
+    showToast('Đã xóa phiếu');
   };
 
   // Toggle ticket status
@@ -142,46 +122,42 @@ export default function App() {
         if (t.id === id) {
           const nextStatus: TicketStatus =
             t.status === 'completed' ? 'pending' : 'completed';
-          const updated = { ...t, status: nextStatus };
-          if (viewingTicket && viewingTicket.id === id) {
-            setViewingTicket(updated);
-          }
-          return updated;
+          return { ...t, status: nextStatus };
         }
         return t;
       })
     );
-    showToast('Đã cập nhật trạng thái phiếu.');
+    showToast('Đã cập nhật trạng thái');
   };
 
   // Copy text helper
   const handleCopyText = (text: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      showToast('Đã sao chép vào bộ nhớ tạm!');
-    }
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Đã sao chép vào bộ nhớ');
+    });
   };
 
   // Export tickets to CSV
   const handleExportCSV = () => {
     if (tickets.length === 0) {
-      showToast('Chưa có dữ liệu phiếu để xuất!');
+      showToast('Chưa có phiếu để xuất CSV');
       return;
     }
 
     const headers = [
       'Mã phiếu',
       'Mã vật tư',
-      'Màu sắc',
+      'Màu',
       'Size',
       'Length',
-      'Lô sản xuất',
-      'Lệnh sản xuất',
-      'Đơn vị tính',
+      'Lô SX',
+      'Lệnh SX',
+      'ĐVT',
       'Số lượng',
       'Vị trí kho',
       'Trạng thái',
-      'Thời gian tạo',
+      'Thời gian',
     ];
 
     const rows = tickets.map((t) => [
@@ -205,22 +181,18 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `phieu-vat-tu-${Date.now()}.csv`);
+    link.setAttribute('download', `phieu-kho-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Đã xuất file CSV thành công!');
+    showToast('Đã tải file CSV');
   };
-
-  // Distinct warehouse locations for filtering
-  const distinctLocations = Array.from(
-    new Set(tickets.map((t) => t.warehouseLocation).filter(Boolean))
-  );
 
   // Filtered tickets
   const filteredTickets = tickets.filter((t) => {
     const q = searchTerm.toLowerCase();
     const matchSearch =
+      !q ||
       t.code.toLowerCase().includes(q) ||
       t.materialCode.toLowerCase().includes(q) ||
       t.color.toLowerCase().includes(q) ||
@@ -242,31 +214,34 @@ export default function App() {
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="h-3 w-3" />
-            Đã nhập kho
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <CheckCircle2 className="h-2.5 w-2.5" />
+            Đã nhập
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <Ban className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+            <Ban className="h-2.5 w-2.5" />
             Đã hủy
           </span>
         );
       case 'pending':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <Clock className="h-3 w-3" />
-            Chờ xử lý
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            <Clock className="h-2.5 w-2.5" />
+            Chờ kiểm
           </span>
         );
     }
   };
 
+  const completedCount = tickets.filter((t) => t.status === 'completed').length;
+  const pendingCount = tickets.filter((t) => t.status === 'pending').length;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors pb-10">
       {/* App Header */}
       <Header
         ticketCount={tickets.length}
@@ -285,61 +260,141 @@ export default function App() {
         }}
       />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
-        {/* HERO WORKFLOW CARD */}
-        <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 overflow-hidden shadow-xl border border-indigo-800/40">
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)`,
-              backgroundSize: '24px 24px',
+      {/* Main Mobile Screen */}
+      <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
+        {/* 1. PRIMARY MOBILE ACTIONS BAR */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Main Action: Quét QR bằng Camera */}
+          <button
+            id="btn-main-mobile-scan"
+            type="button"
+            onClick={() => {
+              setScannedMaterialQr(null);
+              setScannedLocationQr(null);
+              setIsCreateModalOpen(true);
+              handleOpenMaterialScanner();
             }}
+            className="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-xs transition-colors text-sm"
+          >
+            <Camera className="h-5 w-5" />
+            <span>Quét QR</span>
+          </button>
+
+          {/* Secondary Action: Tạo Phiếu */}
+          <button
+            id="btn-main-mobile-create"
+            type="button"
+            onClick={() => {
+              setScannedMaterialQr(null);
+              setScannedLocationQr(null);
+              setIsCreateModalOpen(true);
+            }}
+            className="h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center gap-2 shadow-xs transition-colors text-sm"
+          >
+            <Plus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <span>Tạo phiếu</span>
+          </button>
+        </div>
+
+        {/* 2. STATS PILL ROW */}
+        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+          <span className="font-semibold">
+            Tổng: <strong className="text-slate-900 dark:text-white">{tickets.length}</strong>
+          </span>
+          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+            Đã nhập: <strong>{completedCount}</strong>
+          </span>
+          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
+          <span className="font-semibold text-amber-600 dark:text-amber-400">
+            Chờ kiểm: <strong>{pendingCount}</strong>
+          </span>
+          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1"
+            title="Xuất file CSV"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-400" />
+            <span>CSV</span>
+          </button>
+        </div>
+
+        {/* 3. SEARCH INPUT */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            id="input-mobile-search"
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm mã VT, màu, size, lô, kho..."
+            className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold mb-3">
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
-                <span>Hỗ trợ định dạng QR: Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lô SX ^^ Lệnh SX (hoặc dấu -)</span>
+        {/* 4. FILTER CHIPS */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('all')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              selectedStatus === 'all'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            Tất cả ({tickets.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('completed')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              selectedStatus === 'completed'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            Đã nhập ({completedCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('pending')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              selectedStatus === 'pending'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            Chờ kiểm ({pendingCount})
+          </button>
+        </div>
+
+        {/* 5. TICKET CARDS LIST (MOBILE OPTIMIZED) */}
+        <div className="space-y-2.5 pt-1">
+          {filteredTickets.length === 0 ? (
+            /* Empty State */
+            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
+                <Package className="h-6 w-6" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
-                Quét QR Tách 6 Trường & Điền Vị Trí Kho Tự Động
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Mở form tạo phiếu &rarr; Bấm quét camera &rarr; Rê vào mã QR để tự động lấy dữ liệu tách ra 6 trường, ẩn khung quét & điền kèm 3 trường (Đơn vị tính, Số lượng, Vị trí kho).
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                Chưa có phiếu vật tư
               </p>
-
-              {/* Format badges preview */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-3 text-[11px]">
-                <span className="text-slate-400 font-semibold">Cấu trúc 6 trường:</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-indigo-200 font-mono">1. Mã vật tư</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-pink-200 font-mono">2. Màu</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-cyan-200 font-mono">3. Size</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-amber-200 font-mono">4. Length</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-emerald-200 font-mono">5. Lô SX</span>
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-purple-200 font-mono">6. Lệnh SX</span>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <p className="text-[11px] text-slate-400 mb-4">
+                Bấm nút &quot;Quét QR&quot; hoặc &quot;Tạo phiếu&quot; để thêm phiếu mới.
+              </p>
               <button
-                id="btn-open-create-material-ticket"
-                type="button"
-                onClick={() => {
-                  setScannedMaterialQr(null);
-                  setScannedLocationQr(null);
-                  setIsCreateModalOpen(true);
-                }}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-600/30 hover:scale-[1.02] transition-all"
-              >
-                <FilePlus2 className="h-4 w-4" />
-                <span>+ Tạo Phiếu Mới</span>
-              </button>
-
-              <button
-                id="btn-scan-qr-direct"
                 type="button"
                 onClick={() => {
                   setScannedMaterialQr(null);
@@ -347,426 +402,126 @@ export default function App() {
                   setIsCreateModalOpen(true);
                   handleOpenMaterialScanner();
                 }}
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-100 text-sm font-semibold border border-slate-700 transition-all"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
               >
-                <Camera className="h-4 w-4 text-cyan-400" />
-                <span>Quét QR Bằng Camera</span>
+                <Camera className="h-4 w-4" />
+                <span>Quét mã QR ngay</span>
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* SUMMARY STATS TILES */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              Tổng số phiếu vật tư
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xl font-black text-slate-900 dark:text-white">
-                {tickets.length}
-              </span>
-              <Package className="h-4 w-4 text-indigo-500" />
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              Đã nhập kho
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                {tickets.filter((t) => t.status === 'completed').length}
-              </span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              Chờ xử lý / Đang kiểm
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xl font-black text-amber-600 dark:text-amber-400">
-                {tickets.filter((t) => t.status === 'pending').length}
-              </span>
-              <Clock className="h-4 w-4 text-amber-500" />
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              Vị trí kho đang lưu
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
-                {distinctLocations.length}
-              </span>
-              <MapPin className="h-4 w-4 text-indigo-500" />
-            </div>
-          </div>
-        </div>
-
-        {/* SEARCH & FILTER CONTROLS */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search box */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              id="input-search-material-tickets"
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo Mã vật tư, Màu, Size, Length, Lô SX, Lệnh SX, Vị trí kho..."
-              className="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 transition-all"
-            />
-          </div>
-
-          {/* Filters & View switcher */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Status filter */}
-            <select
-              id="select-material-status"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="completed">Đã nhập kho</option>
-              <option value="pending">Chờ xử lý</option>
-            </select>
-
-            {/* Warehouse Location filter */}
-            <select
-              id="select-material-location"
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">Tất cả vị trí kho</option>
-              {distinctLocations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-                title="Dạng bảng dữ liệu"
-              >
-                <TableIcon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Bảng</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
-                  viewMode === 'cards'
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-                title="Dạng thẻ lưới"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Thẻ</span>
-              </button>
-            </div>
-
-            {/* Export CSV button */}
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors"
-              title="Xuất danh sách ra file CSV Excel"
-            >
-              <Download className="h-3.5 w-3.5 text-slate-500" />
-              <span className="hidden sm:inline">Xuất CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* TICKET LIST SECTION */}
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-indigo-500" />
-              <span>Danh Sách Phiếu Vật Tư ({filteredTickets.length})</span>
-            </h3>
-
-            <button
-              type="button"
-              onClick={() => {
-                setScannedMaterialQr(null);
-                setScannedLocationQr(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-            >
-              <span>+ Thêm phiếu mới</span>
-            </button>
-          </div>
-
-          {filteredTickets.length === 0 ? (
-            /* Empty State */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center flex flex-col items-center justify-center">
-              <div className="h-14 w-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-indigo-500 flex items-center justify-center mb-3">
-                <Package className="h-7 w-7" />
-              </div>
-              <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-                Không tìm thấy phiếu vật tư nào
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-5">
-                {searchTerm || selectedStatus !== 'all' || selectedLocation !== 'all'
-                  ? 'Không có phiếu nào khớp với bộ lọc tìm kiếm hiện tại.'
-                  : 'Hãy bấm "Tạo Phiếu Mới" hoặc dùng camera quét mã QR để lưu phiếu vật tư đầu tiên.'}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedStatus('all');
-                  setSelectedLocation('all');
-                  setScannedMaterialQr(null);
-                  setScannedLocationQr(null);
-                  setIsCreateModalOpen(true);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-md transition-colors"
-              >
-                <FilePlus2 className="h-4 w-4" />
-                <span>Tạo phiếu mới ngay</span>
-              </button>
-            </div>
-          ) : viewMode === 'table' ? (
-            /* TABLE VIEW: Displays all 6 QR fields + 3 additional fields clearly */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/70 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-3">Mã phiếu</th>
-                      <th className="py-3 px-3">Mã vật tư (1)</th>
-                      <th className="py-3 px-3">Màu (2)</th>
-                      <th className="py-3 px-3">Size (3)</th>
-                      <th className="py-3 px-3">Length (4)</th>
-                      <th className="py-3 px-3">Lô SX (5)</th>
-                      <th className="py-3 px-3">Lệnh SX (6)</th>
-                      <th className="py-3 px-3">ĐVT & SL</th>
-                      <th className="py-3 px-3">Vị trí kho</th>
-                      <th className="py-3 px-3">Trạng thái</th>
-                      <th className="py-3 px-3 text-right">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredTickets.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                      >
-                        {/* Code */}
-                        <td className="py-3 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                          {t.code}
-                        </td>
-
-                        {/* 1. Mã vật tư */}
-                        <td className="py-3 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                          <button
-                            type="button"
-                            onClick={() => setViewingTicket(t)}
-                            className="hover:underline text-left"
-                          >
-                            {t.materialCode || '—'}
-                          </button>
-                        </td>
-
-                        {/* 2. Màu */}
-                        <td className="py-3 px-3 font-medium text-slate-700 dark:text-slate-300">
-                          {t.color || '—'}
-                        </td>
-
-                        {/* 3. Size */}
-                        <td className="py-3 px-3 font-semibold text-slate-800 dark:text-slate-200">
-                          {t.size || '—'}
-                        </td>
-
-                        {/* 4. Length */}
-                        <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
-                          {t.length || '—'}
-                        </td>
-
-                        {/* 5. Lô SX */}
-                        <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-400">
-                          {t.batchNumber || '—'}
-                        </td>
-
-                        {/* 6. Lệnh SX */}
-                        <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-400">
-                          {t.productionOrder || '—'}
-                        </td>
-
-                        {/* ĐVT & SL */}
-                        <td className="py-3 px-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          {t.quantity} {t.unit}
-                        </td>
-
-                        {/* Vị trí kho */}
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                            <MapPin className="h-3 w-3 text-emerald-500" />
-                            {t.warehouseLocation || 'Chưa gán'}
-                          </span>
-                        </td>
-
-                        {/* Trạng thái */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          {getStatusBadge(t.status)}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3 px-3 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setViewingTicket(t)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950"
-                              title="Xem chi tiết phiếu"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyText(t.rawQr || t.materialCode)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                              title="Sao chép dữ liệu QR"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTicket(t.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950"
-                              title="Xóa phiếu"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           ) : (
-            /* CARDS GRID VIEW */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTickets.map((t) => (
-                <div
-                  key={t.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:shadow-md hover:border-indigo-400/60 dark:hover:border-indigo-600/60 transition-all flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Header: Code & Status */}
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900">
-                        {t.code}
-                      </span>
-                      {getStatusBadge(t.status)}
-                    </div>
-
-                    {/* Material Code */}
-                    <h4
-                      onClick={() => setViewingTicket(t)}
-                      className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors cursor-pointer line-clamp-1 mb-2 font-mono"
-                    >
-                      {t.materialCode || '(Chưa có mã vật tư)'}
-                    </h4>
-
-                    {/* 6 QR Fields Mini Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Màu:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
-                          {t.color || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Size / Kích cỡ:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
-                          {t.size || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Length:</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200 truncate block">
-                          {t.length || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Lô SX:</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200 truncate block">
-                          {t.batchNumber || '—'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Additional fields: ĐVT, SL, Vị trí kho */}
-                    <div className="flex items-center justify-between text-xs pt-1 mb-2">
-                      <div className="text-emerald-600 dark:text-emerald-400 font-bold">
-                        {t.quantity} {t.unit}
-                      </div>
-
-                      <div className="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                        <MapPin className="h-3 w-3 text-emerald-500" />
-                        <span>{t.warehouseLocation || 'Chưa gán'}</span>
-                      </div>
-                    </div>
-
-                    {/* QR raw snippet */}
-                    {t.rawQr && (
-                      <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md">
-                        QR: {t.rawQr}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card footer */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">
-                      Lệnh SX: <strong className="font-mono">{t.productionOrder || '—'}</strong>
+            filteredTickets.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => setViewingTicket(t)}
+                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500/60 active:scale-[0.99] transition-all cursor-pointer space-y-2"
+              >
+                {/* Card Top: Code, Status & Time */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      {t.code}
                     </span>
+                    {getStatusBadge(t.status)}
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                  </span>
+                </div>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTicket(t.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950"
-                        title="Xóa phiếu"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                {/* Material Code Title */}
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-none">
+                    Mã vật tư:
+                  </span>
+                  <h3 className="text-sm font-black font-mono text-slate-900 dark:text-white truncate">
+                    {t.materialCode || '(Chưa có mã VT)'}
+                  </h3>
+                </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setViewingTicket(t)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-semibold transition-colors"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>Chi tiết</span>
-                      </button>
-                    </div>
+                {/* 6 Fields Compact Summary Grid */}
+                <div className="grid grid-cols-3 gap-1.5 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80">
+                  <div>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Màu:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                      {t.color || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Size:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                      {t.size || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Length:</span>
+                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                      {t.length || '—'}
+                    </span>
+                  </div>
+                  <div className="col-span-1">
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Lô SX:</span>
+                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
+                      {t.batchNumber || '—'}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">Lệnh SX:</span>
+                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
+                      {t.productionOrder || '—'}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Card Bottom: Quantity, Location & Quick actions */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <div className="flex items-center gap-2">
+                    {/* Quantity Pill */}
+                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                      {t.quantity} {t.unit}
+                    </span>
+
+                    {/* Location Badge */}
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="truncate max-w-[110px]">
+                        {t.warehouseLocation || 'Chưa gán'}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div
+                    className="flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(t.rawQr || t.materialCode)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      title="Sao chép"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTicket(t.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600"
+                      title="Xóa"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewingTicket(t)}
+                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                      title="Chi tiết"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </main>
@@ -791,13 +546,13 @@ export default function App() {
         onScanSuccess={handleScanSuccess}
         title={
           scannerTarget === 'material'
-            ? 'Quét Tem Mã QR Vật Tư'
-            : 'Quét Mã Vị Trí Kho'
+            ? 'Quét mã QR vật tư'
+            : 'Quét vị trí kho'
         }
         description={
           scannerTarget === 'material'
-            ? 'Rê camera vào tem QR vật tư (Mã VT ^^ Màu ^^ Size ^^ Length ^^ Lô SX ^^ Lệnh SX)'
-            : 'Rê camera vào tem kệ kho / pallet — Tự động lấy chuỗi vị trí'
+            ? 'Đưa camera vào mã QR'
+            : 'Đưa camera vào mã vị trí kệ kho'
         }
         samples={
           scannerTarget === 'material'

@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  FileText,
   X,
   Printer,
   Copy,
@@ -9,16 +8,8 @@ import {
   Clock,
   Ban,
   Package,
-  Palette,
-  Maximize2,
-  Ruler,
-  Boxes,
-  ClipboardList,
-  Scale,
   MapPin,
   Trash2,
-  QrCode,
-  Tag,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
 
@@ -47,24 +38,24 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
     switch (ticket.status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Đã nhập kho
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <CheckCircle2 className="h-3 w-3" />
+            Đã nhập
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <Ban className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+            <Ban className="h-3 w-3" />
             Đã hủy
           </span>
         );
       case 'pending':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <Clock className="h-3.5 w-3.5" />
-            Chờ xử lý / Đang kiểm
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            <Clock className="h-3 w-3" />
+            Chờ kiểm
           </span>
         );
     }
@@ -72,218 +63,158 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-3 bg-black/60 backdrop-blur-xs">
         <div className="fixed inset-0" onClick={onClose} />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
-          className="relative z-10 w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col text-slate-900 dark:text-slate-100"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/70">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                <Package className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Phiếu Vật Tư: {ticket.materialCode || ticket.code}</span>
-                  {getStatusBadge()}
-                </h3>
-                <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400">
-                  Mã phiếu: {ticket.code} • Tạo lúc: {new Date(ticket.createdAt).toLocaleString('vi-VN')}
-                </span>
-              </div>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {ticket.code}
+              </span>
+              {getStatusBadge()}
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-            {/* Raw QR Text Preview Card */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Chuỗi mã QR gốc:
+          <div className="p-4 space-y-3.5 overflow-y-auto flex-1">
+            {/* Main Item Highlight */}
+            <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-800 dark:text-emerald-300">
+                  Mã vật tư
                 </span>
-                <p className="text-xs font-mono text-slate-800 dark:text-slate-200 break-all">
-                  {ticket.rawQr || '(Chưa có mã QR gốc)'}
+                <h2 className="text-base font-black font-mono text-slate-900 dark:text-white">
+                  {ticket.materialCode || '—'}
+                </h2>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-800 dark:text-emerald-300">
+                  Số lượng
+                </span>
+                <p className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                  {ticket.quantity} {ticket.unit}
                 </p>
               </div>
-
-              {ticket.rawQr && (
-                <button
-                  type="button"
-                  onClick={() => onCopyText(ticket.rawQr)}
-                  className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold shrink-0"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Sao chép</span>
-                </button>
-              )}
             </div>
 
-            {/* 6 QR Fields Grid */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-indigo-500" />
-                <span>6 Trường Tách Từ Mã QR</span>
-              </h4>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <Package className="h-3 w-3 text-indigo-500" />
-                    Mã vật tư
-                  </span>
-                  <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 break-all">
-                    {ticket.materialCode || '—'}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <Palette className="h-3 w-3 text-pink-500" />
-                    Màu sắc
-                  </span>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">
+            {/* 6 Fields Grid */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Thông tin mã QR
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Màu sắc</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.color || '—'}
                   </span>
                 </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <Maximize2 className="h-3 w-3 text-cyan-500" />
-                    Kích thước (Size)
-                  </span>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Kích cỡ (Size)</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.size || '—'}
                   </span>
                 </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <Ruler className="h-3 w-3 text-amber-500" />
-                    Chiều dài (Length)
-                  </span>
-                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Chiều dài (Length)</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                     {ticket.length || '—'}
                   </span>
                 </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <Boxes className="h-3 w-3 text-emerald-500" />
-                    Lô sản xuất
-                  </span>
-                  <span className="text-xs font-mono font-semibold text-slate-900 dark:text-white">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Lô sản xuất</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.batchNumber || '—'}
                   </span>
                 </div>
-
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
-                    <ClipboardList className="h-3 w-3 text-purple-500" />
-                    Lệnh sản xuất
-                  </span>
-                  <span className="text-xs font-mono font-semibold text-slate-900 dark:text-white">
+                <div className="col-span-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Lệnh sản xuất (PO)</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.productionOrder || '—'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* 3 Additional Fields: Đơn vị tính, Số lượng, Vị trí kho */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>3 Trường Bổ Sung (Kho hàng)</span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40">
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 block mb-1">
-                    Đơn vị tính:
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {ticket.unit || 'Cuộn'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40">
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 block mb-1">
-                    Số lượng:
-                  </span>
-                  <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                    {ticket.quantity} {ticket.unit}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40">
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 block mb-1 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Vị trí kho:
-                  </span>
-                  <span className="text-sm font-mono font-bold text-slate-900 dark:text-white">
-                    {ticket.warehouseLocation || '(Chưa xác định)'}
-                  </span>
-                </div>
+            {/* Warehouse Location & QR String */}
+            <div className="space-y-2">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                  Vị trí kho
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                  {ticket.warehouseLocation || '(Chưa xác định)'}
+                </span>
               </div>
+
+              {ticket.rawQr && (
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block">QR gốc:</span>
+                    <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate block">
+                      {ticket.rawQr}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCopyText(ticket.rawQr)}
+                    className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Chép
+                  </button>
+                </div>
+              )}
             </div>
-
-            {/* Notes if any */}
-            {ticket.notes && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs">
-                <span className="text-slate-400 font-semibold block mb-1">Ghi chú phiếu:</span>
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                  {ticket.notes}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Footer controls */}
-          <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/70 flex items-center justify-between gap-2">
+          <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => {
                 onDeleteTicket(ticket.id);
                 onClose();
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-xs font-semibold"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span>Xóa phiếu</span>
+              <span>Xóa</span>
             </button>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => onToggleStatus(ticket.id)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors"
+                className="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200"
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>
-                  {ticket.status === 'completed' ? 'Chuyển về Đang chờ' : 'Đánh dấu Đã nhập kho'}
-                </span>
+                {ticket.status === 'completed' ? 'Đổi sang Chờ' : 'Nhập kho'}
               </button>
 
               <button
                 type="button"
                 onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-xs transition-colors"
+                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
               >
                 <Printer className="h-3.5 w-3.5" />
-                <span>In phiếu</span>
+                <span>In</span>
               </button>
             </div>
           </div>

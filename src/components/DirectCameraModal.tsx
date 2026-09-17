@@ -312,7 +312,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+              <div className="h-8 w-8 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                 <Camera className="h-4 w-4" />
               </div>
               <div>
@@ -321,13 +321,10 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                   {scanLocked && (
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
-                      Đã nhận diện!
+                      Xong!
                     </span>
                   )}
                 </h3>
-                <p className="text-[11px] text-slate-400">
-                  {description}
-                </p>
               </div>
             </div>
 
@@ -411,28 +408,28 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 className={`absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 rounded-tl-xl transition-all duration-300 ${
                   scanLocked
                     ? 'border-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,1)]'
-                    : 'border-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]'
+                    : 'border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                 }`}
               />
               <div
                 className={`absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 rounded-tr-xl transition-all duration-300 ${
                   scanLocked
                     ? 'border-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,1)]'
-                    : 'border-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]'
+                    : 'border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                 }`}
               />
               <div
                 className={`absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 rounded-bl-xl transition-all duration-300 ${
                   scanLocked
                     ? 'border-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,1)]'
-                    : 'border-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]'
+                    : 'border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                 }`}
               />
               <div
                 className={`absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 rounded-br-xl transition-all duration-300 ${
                   scanLocked
                     ? 'border-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,1)]'
-                    : 'border-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]'
+                    : 'border-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                 }`}
               />
 
@@ -441,24 +438,24 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
                   scanLocked
                     ? 'bg-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,1)]'
-                    : 'bg-indigo-400/80 drop-shadow-[0_0_4px_rgba(99,102,241,1)]'
+                    : 'bg-emerald-400/80 drop-shadow-[0_0_4px_rgba(16,185,129,1)]'
                 }`}
               />
 
               {/* Animated Scan Laser */}
               {!scanLocked && isCameraActive && (
                 <motion.div
-                  className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent pointer-events-none shadow-[0_0_12px_2px_rgba(34,211,238,0.8)]"
+                  className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent pointer-events-none shadow-[0_0_12px_2px_rgba(52,211,153,0.9)]"
                   animate={{
                     top: ['8%', '92%', '8%'],
                   }}
                   transition={{
-                    duration: 2,
+                    duration: 1.8,
                     repeat: Infinity,
                     ease: 'easeInOut',
                   }}
                 >
-                  <div className="w-full h-6 -mt-3 bg-gradient-to-b from-cyan-400/20 to-transparent pointer-events-none" />
+                  <div className="w-full h-6 -mt-3 bg-gradient-to-b from-emerald-400/20 to-transparent pointer-events-none" />
                 </motion.div>
               )}
 
@@ -513,10 +510,10 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 id="btn-toggle-sample-list"
                 type="button"
                 onClick={() => setShowSamplePicker((prev) => !prev)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <Sparkles className="h-3 w-3" />
-                <span>{showSamplePicker ? 'Đóng mẫu' : 'Mẫu QR thử nghiệm'}</span>
+                <span>{showSamplePicker ? 'Đóng' : 'Mẫu thử'}</span>
               </button>
             </div>
 
@@ -535,7 +532,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                       key={idx}
                       type="button"
                       onClick={() => handleSelectSample(val)}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-indigo-900/40 border border-slate-700/60 hover:border-indigo-500/50 text-left transition-colors"
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-emerald-950/60 border border-slate-700/60 hover:border-emerald-500/50 text-left transition-colors"
                     >
                       <div className="min-w-0">
                         <span className="text-xs font-semibold text-slate-200 block truncate">
@@ -545,7 +542,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                           {desc || val}
                         </span>
                       </div>
-                      <span className="text-[11px] text-indigo-400 font-semibold shrink-0 ml-2">
+                      <span className="text-[11px] text-emerald-400 font-semibold shrink-0 ml-2">
                         Chọn &rarr;
                       </span>
                     </button>
