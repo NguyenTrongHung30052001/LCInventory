@@ -9,8 +9,8 @@ import {
   Plus,
   Search,
   CheckCircle2,
+  AlertCircle,
   Clock,
-  Ban,
   Copy,
   Eye,
   Trash2,
@@ -18,13 +18,14 @@ import {
   Download,
   Package,
   X,
+  FileText,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
 import { MaterialTicketDetailModal } from './components/MaterialTicketDetailModal';
 import { DirectCameraModal } from './components/DirectCameraModal';
 import { Toast } from './components/Toast';
-import { MaterialTicket, TicketStatus } from './types';
+import { MaterialTicket } from './types';
 import {
   getStoredMaterialTickets,
   saveStoredMaterialTickets,
@@ -34,15 +35,14 @@ import {
   SAMPLE_WAREHOUSE_LOCATIONS,
   parseMaterialQr,
 } from './utils/materialQrParser';
+import { sendToMesInventory } from './services/mesApi';
 
 export default function App() {
-  // Stored Material Tickets
+  // Stored Material Tickets - Mặc định danh sách trống (không có đơn ảo)
   const [tickets, setTickets] = useState<MaterialTicket[]>(() =>
     getStoredMaterialTickets()
   );
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,11 +54,12 @@ export default function App() {
   const [scannedMaterialQr, setScannedMaterialQr] = useState<string | null>(null);
   const [scannedLocationQr, setScannedLocationQr] = useState<string | null>(null);
 
-  // Audio settings and toast
+  // Audio settings, loading and toast
   const [beepEnabled, setBeepEnabled] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Persist tickets
+  // Persist tickets to local storage
   useEffect(() => {
     saveStoredMaterialTickets(tickets);
   }, [tickets]);
@@ -67,7 +68,7 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 2800);
+    }, 3200);
   };
 
   // Open camera scanner for Material QR
@@ -101,33 +102,68 @@ export default function App() {
     }
   };
 
-  // Save new material ticket
-  const handleSaveTicket = (newTicket: MaterialTicket) => {
-    setTickets((prev) => [newTicket, ...prev]);
-    setScannedMaterialQr(null);
-    setScannedLocationQr(null);
-    showToast(`Đã lưu phiếu ${newTicket.code}`);
+  // Save new material ticket & call MES API: http://mes.lienchau.vn:5173/api/FinishedGoodInventory
+  const handleSaveTicket = async (newTicket: MaterialTicket) => {
+    setIsSaving(true);
+    try {
+      const mesRes = await sendToMesInventory(newTicket);
+      const savedTicket: MaterialTicket = {
+        ...newTicket,
+        mesSyncStatus: mesRes.success ? 'synced' : 'failed',
+        mesSyncError: mesRes.error,
+      };
+
+      setTickets((prev) => [savedTicket, ...prev]);
+      setScannedMaterialQr(null);
+      setScannedLocationQr(null);
+
+      if (mesRes.success) {
+        showToast(`Đã lưu & gửi MES thành công!`);
+      } else {
+        showToast(`Đã lưu phiếu (Lỗi gửi MES: ${mesRes.error || 'Kiểm tra mạng'})`);
+      }
+    } catch (err: any) {
+      const savedTicket: MaterialTicket = {
+        ...newTicket,
+        mesSyncStatus: 'failed',
+        mesSyncError: err.message || 'Lỗi gửi dữ liệu',
+      };
+      setTickets((prev) => [savedTicket, ...prev]);
+      showToast(`Đã lưu nội bộ (Không gửi được MES)`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Resend ticket to MES API
+  const handleResendToMes = async (ticket: MaterialTicket) => {
+    showToast('Đang gửi lại lên hệ thống MES...');
+    const mesRes = await sendToMesInventory(ticket);
+
+    setTickets((prev) =>
+      prev.map((t) => {
+        if (t.id === ticket.id) {
+          return {
+            ...t,
+            mesSyncStatus: mesRes.success ? 'synced' : 'failed',
+            mesSyncError: mesRes.error,
+          };
+        }
+        return t;
+      })
+    );
+
+    if (mesRes.success) {
+      showToast('Đã gửi MES thành công!');
+    } else {
+      showToast(`Gửi lại thất bại: ${mesRes.error || 'Lỗi'}`);
+    }
   };
 
   // Delete ticket
   const handleDeleteTicket = (id: string) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
     showToast('Đã xóa phiếu');
-  };
-
-  // Toggle ticket status
-  const handleToggleStatus = (id: string) => {
-    setTickets((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextStatus: TicketStatus =
-            t.status === 'completed' ? 'pending' : 'completed';
-          return { ...t, status: nextStatus };
-        }
-        return t;
-      })
-    );
-    showToast('Đã cập nhật trạng thái');
   };
 
   // Copy text helper
@@ -146,22 +182,23 @@ export default function App() {
     }
 
     const headers = [
-      'Mã phiếu',
       'Mã vật tư',
       'Màu',
       'Size',
       'Length',
-      'Lô SX',
-      'Lệnh SX',
+      'Lô SX (Lot)',
+      'Lệnh SX (PO)',
       'ĐVT',
       'Số lượng',
       'Vị trí kho',
-      'Trạng thái',
+      'Mã kho',
+      'Người quét',
+      'Ghi chú',
+      'Trạng thái MES',
       'Thời gian',
     ];
 
     const rows = tickets.map((t) => [
-      t.code,
       `"${(t.materialCode || '').replace(/"/g, '""')}"`,
       `"${(t.color || '').replace(/"/g, '""')}"`,
       `"${(t.size || '').replace(/"/g, '""')}"`,
@@ -171,7 +208,10 @@ export default function App() {
       `"${(t.unit || '').replace(/"/g, '""')}"`,
       t.quantity,
       `"${(t.warehouseLocation || '').replace(/"/g, '""')}"`,
-      t.status === 'completed' ? 'Đã nhập kho' : 'Chờ xử lý',
+      `"${(t.warehouseCode || 'FGW').replace(/"/g, '""')}"`,
+      `"${(t.scannedBy || '105').replace(/"/g, '""')}"`,
+      `"${(t.notes || '').replace(/"/g, '""')}"`,
+      t.mesSyncStatus === 'synced' ? 'Đã gửi MES' : 'Chưa gửi',
       new Date(t.createdAt).toLocaleString('vi-VN'),
     ]);
 
@@ -181,19 +221,18 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `phieu-kho-${Date.now()}.csv`);
+    link.setAttribute('download', `phieu-kho-mes-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     showToast('Đã tải file CSV');
   };
 
-  // Filtered tickets
+  // Filtered tickets by search
   const filteredTickets = tickets.filter((t) => {
-    const q = searchTerm.toLowerCase();
-    const matchSearch =
-      !q ||
-      t.code.toLowerCase().includes(q) ||
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return true;
+    return (
       t.materialCode.toLowerCase().includes(q) ||
       t.color.toLowerCase().includes(q) ||
       t.size.toLowerCase().includes(q) ||
@@ -201,44 +240,36 @@ export default function App() {
       t.batchNumber.toLowerCase().includes(q) ||
       t.productionOrder.toLowerCase().includes(q) ||
       t.warehouseLocation.toLowerCase().includes(q) ||
-      t.rawQr.toLowerCase().includes(q);
-
-    const matchStatus = selectedStatus === 'all' || t.status === selectedStatus;
-    const matchLocation =
-      selectedLocation === 'all' || t.warehouseLocation === selectedLocation;
-
-    return matchSearch && matchStatus && matchLocation;
+      (t.notes && t.notes.toLowerCase().includes(q)) ||
+      t.rawQr.toLowerCase().includes(q)
+    );
   });
 
-  const getStatusBadge = (status: TicketStatus) => {
+  const getMesBadge = (status?: 'synced' | 'failed' | 'pending') => {
     switch (status) {
-      case 'completed':
+      case 'synced':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             <CheckCircle2 className="h-2.5 w-2.5" />
-            Đã nhập
+            Đã gửi MES
           </span>
         );
-      case 'cancelled':
+      case 'failed':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-            <Ban className="h-2.5 w-2.5" />
-            Đã hủy
+            <AlertCircle className="h-2.5 w-2.5" />
+            Lỗi gửi MES
           </span>
         );
-      case 'pending':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <Clock className="h-2.5 w-2.5" />
-            Chờ kiểm
+            Đã lưu
           </span>
         );
     }
   };
-
-  const completedCount = tickets.filter((t) => t.status === 'completed').length;
-  const pendingCount = tickets.filter((t) => t.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors pb-10">
@@ -297,28 +328,21 @@ export default function App() {
         </div>
 
         {/* 2. STATS PILL ROW */}
-        <div className="flex items-center justify-between text-xs px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+        <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
           <span className="font-semibold">
-            Tổng: <strong className="text-slate-900 dark:text-white">{tickets.length}</strong>
+            Tổng phiếu: <strong className="text-slate-900 dark:text-white font-mono">{tickets.length}</strong>
           </span>
-          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
-          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-            Đã nhập: <strong>{completedCount}</strong>
-          </span>
-          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
-          <span className="font-semibold text-amber-600 dark:text-amber-400">
-            Chờ kiểm: <strong>{pendingCount}</strong>
-          </span>
-          <span className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1"
-            title="Xuất file CSV"
-          >
-            <Download className="h-3.5 w-3.5 text-slate-400" />
-            <span>CSV</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1"
+              title="Xuất file CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-400" />
+              <span>Xuất CSV</span>
+            </button>
+          </div>
         </div>
 
         {/* 3. SEARCH INPUT */}
@@ -329,7 +353,7 @@ export default function App() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm mã VT, màu, size, lô, kho..."
+            placeholder="Tìm mã VT, màu, size, lô, kho, ghi chú..."
             className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
           />
           {searchTerm && (
@@ -343,44 +367,7 @@ export default function App() {
           )}
         </div>
 
-        {/* 4. FILTER CHIPS */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            onClick={() => setSelectedStatus('all')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              selectedStatus === 'all'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-            }`}
-          >
-            Tất cả ({tickets.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedStatus('completed')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              selectedStatus === 'completed'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-            }`}
-          >
-            Đã nhập ({completedCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedStatus('pending')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              selectedStatus === 'pending'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-            }`}
-          >
-            Chờ kiểm ({pendingCount})
-          </button>
-        </div>
-
-        {/* 5. TICKET CARDS LIST (MOBILE OPTIMIZED) */}
+        {/* 4. TICKET CARDS LIST (MOBILE OPTIMIZED) - Không có đơn ảo, mặc định để trống */}
         <div className="space-y-2.5 pt-1">
           {filteredTickets.length === 0 ? (
             /* Empty State */
@@ -415,16 +402,17 @@ export default function App() {
                 onClick={() => setViewingTicket(t)}
                 className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500/60 active:scale-[0.99] transition-all cursor-pointer space-y-2"
               >
-                {/* Card Top: Code, Status & Time */}
+                {/* Card Top: Material Code, MES Status & Time (Bỏ mã phiếu & trạng thái) */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      {t.code}
-                    </span>
-                    {getStatusBadge(t.status)}
+                    {getMesBadge(t.mesSyncStatus)}
                   </div>
-                  <span className="text-[10px] text-slate-400">
-                    {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {new Date(t.createdAt).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    - {new Date(t.createdAt).toLocaleDateString('vi-VN')}
                   </span>
                 </div>
 
@@ -433,7 +421,7 @@ export default function App() {
                   <span className="text-[10px] uppercase font-bold text-slate-400 block leading-none">
                     Mã vật tư:
                   </span>
-                  <h3 className="text-sm font-black font-mono text-slate-900 dark:text-white truncate">
+                  <h3 className="text-sm font-black font-mono text-emerald-700 dark:text-emerald-400 truncate">
                     {t.materialCode || '(Chưa có mã VT)'}
                   </h3>
                 </div>
@@ -472,6 +460,14 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Ghi chú hiển thị nếu có */}
+                {t.notes && (
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2 rounded-xl border border-slate-100 dark:border-slate-800/60 flex items-start gap-1.5">
+                    <FileText className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <span className="line-clamp-2 italic">{t.notes}</span>
+                  </div>
+                )}
+
                 {/* Card Bottom: Quantity, Location & Quick actions */}
                 <div className="flex items-center justify-between pt-0.5">
                   <div className="flex items-center gap-2">
@@ -484,7 +480,7 @@ export default function App() {
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span className="truncate max-w-[110px]">
-                        {t.warehouseLocation || 'Chưa gán'}
+                        {t.warehouseLocation || 'A1-02'}
                       </span>
                     </span>
                   </div>
@@ -537,6 +533,7 @@ export default function App() {
         onSaveTicket={handleSaveTicket}
         onClearScannedMaterialQr={() => setScannedMaterialQr(null)}
         onClearScannedLocationQr={() => setScannedLocationQr(null)}
+        isSaving={isSaving}
       />
 
       {/* MODAL 2: DIRECT CAMERA SCANNER */}
@@ -570,8 +567,8 @@ export default function App() {
         ticket={viewingTicket}
         onClose={() => setViewingTicket(null)}
         onDeleteTicket={handleDeleteTicket}
-        onToggleStatus={handleToggleStatus}
         onCopyText={handleCopyText}
+        onResendToMes={handleResendToMes}
       />
 
       {/* TOAST NOTIFICATION */}

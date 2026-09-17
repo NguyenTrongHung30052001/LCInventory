@@ -5,11 +5,13 @@ import {
   Printer,
   Copy,
   CheckCircle2,
-  Clock,
-  Ban,
-  Package,
+  AlertCircle,
   MapPin,
   Trash2,
+  FileText,
+  Send,
+  Warehouse,
+  User,
 } from 'lucide-react';
 import { MaterialTicket } from '../types';
 
@@ -17,48 +19,21 @@ interface MaterialTicketDetailModalProps {
   ticket: MaterialTicket | null;
   onClose: () => void;
   onDeleteTicket: (id: string) => void;
-  onToggleStatus: (id: string) => void;
   onCopyText: (text: string) => void;
+  onResendToMes?: (ticket: MaterialTicket) => void;
 }
 
 export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps> = ({
   ticket,
   onClose,
   onDeleteTicket,
-  onToggleStatus,
   onCopyText,
+  onResendToMes,
 }) => {
   if (!ticket) return null;
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const getStatusBadge = () => {
-    switch (ticket.status) {
-      case 'completed':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            <CheckCircle2 className="h-3 w-3" />
-            Đã nhập
-          </span>
-        );
-      case 'cancelled':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-            <Ban className="h-3 w-3" />
-            Đã hủy
-          </span>
-        );
-      case 'pending':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-            <Clock className="h-3 w-3" />
-            Chờ kiểm
-          </span>
-        );
-    }
   };
 
   return (
@@ -72,13 +47,20 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
           exit={{ opacity: 0, y: 20 }}
           className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100"
         >
-          {/* Header */}
+          {/* Header - Không còn mã phiếu, trạng thái */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {ticket.code}
-              </span>
-              {getStatusBadge()}
+              <div className="h-7 w-7 rounded-lg bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Chi tiết phiếu vật tư
+                </h3>
+                <span className="text-[10px] text-slate-400">
+                  {new Date(ticket.createdAt).toLocaleString('vi-VN')}
+                </span>
+              </div>
             </div>
 
             <button
@@ -112,11 +94,48 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               </div>
             </div>
 
+            {/* MES API Sync Status Banner */}
+            <div
+              className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                ticket.mesSyncStatus === 'synced'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                  : ticket.mesSyncStatus === 'failed'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300'
+                  : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                {ticket.mesSyncStatus === 'synced' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                ) : ticket.mesSyncStatus === 'failed' ? (
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                ) : (
+                  <Send className="h-4 w-4 text-slate-400 shrink-0" />
+                )}
+                <span className="text-xs font-semibold truncate">
+                  {ticket.mesSyncStatus === 'synced'
+                    ? 'Đã gửi lên MES (FinishedGoodInventory)'
+                    : ticket.mesSyncStatus === 'failed'
+                    ? `Lỗi gửi MES: ${ticket.mesSyncError || 'Không thể kết nối'}`
+                    : 'Đã lưu nội bộ'}
+                </span>
+              </div>
+              {onResendToMes && ticket.mesSyncStatus === 'failed' && (
+                <button
+                  type="button"
+                  onClick={() => onResendToMes(ticket)}
+                  className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold shrink-0"
+                >
+                  Gửi lại
+                </button>
+              )}
+            </div>
+
             {/* 6 Fields Grid */}
             <div className="space-y-1.5">
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Thông tin mã QR
+                Thông tin 6 trường vật tư
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
@@ -138,7 +157,7 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Lô sản xuất</span>
+                  <span className="text-[10px] text-slate-400 block">Lô sản xuất (Lot)</span>
                   <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.batchNumber || '—'}
                   </span>
@@ -152,37 +171,68 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               </div>
             </div>
 
-            {/* Warehouse Location & QR String */}
-            <div className="space-y-2">
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-                  Vị trí kho
+            {/* Thông tin kho & Người quét */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                  <MapPin className="h-3 w-3 text-emerald-600" />
+                  Vị trí
                 </span>
-                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
-                  {ticket.warehouseLocation || '(Chưa xác định)'}
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
+                  {ticket.warehouseLocation || 'A1-02'}
                 </span>
               </div>
-
-              {ticket.rawQr && (
-                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block">QR gốc:</span>
-                    <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate block">
-                      {ticket.rawQr}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onCopyText(ticket.rawQr)}
-                    className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0"
-                  >
-                    <Copy className="h-3 w-3" />
-                    Chép
-                  </button>
-                </div>
-              )}
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                  <Warehouse className="h-3 w-3 text-emerald-600" />
+                  Mã kho
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
+                  {ticket.warehouseCode || 'FGW'}
+                </span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                  <User className="h-3 w-3 text-emerald-600" />
+                  Người quét
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
+                  {ticket.scannedBy || '105'}
+                </span>
+              </div>
             </div>
+
+            {/* Ghi chú */}
+            {ticket.notes && (
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
+                  Ghi chú:
+                </span>
+                <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+                  {ticket.notes}
+                </p>
+              </div>
+            )}
+
+            {/* QR String */}
+            {ticket.rawQr && (
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] text-slate-400 uppercase tracking-wider block">QR gốc:</span>
+                  <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate block">
+                    {ticket.rawQr}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCopyText(ticket.rawQr)}
+                  className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0"
+                >
+                  <Copy className="h-3 w-3" />
+                  Chép
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Footer controls */}
@@ -196,27 +246,17 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-xs font-semibold"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span>Xóa</span>
+              <span>Xóa phiếu</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onToggleStatus(ticket.id)}
-                className="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200"
-              >
-                {ticket.status === 'completed' ? 'Đổi sang Chờ' : 'Nhập kho'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span>In</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>In phiếu</span>
+            </button>
           </div>
         </motion.div>
       </div>

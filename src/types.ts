@@ -32,7 +32,7 @@ export type TicketStatus = 'pending' | 'completed' | 'cancelled';
 
 export interface MaterialTicket {
   id: string;
-  code: string; // e.g. PH-102931
+  code?: string; // Optional (removed from creation form per user request)
   createdAt: number;
 
   // Raw QR string
@@ -43,16 +43,22 @@ export interface MaterialTicket {
   color: string;           // Màu
   size: string;            // Size
   length: string;          // Length
-  batchNumber: string;     // Lô sản xuất
+  batchNumber: string;     // Lô sản xuất (lotNumber)
   productionOrder: string; // Lệnh sản xuất
 
-  // 3 additional fields: Đơn vị tính, số lượng, vị trí kho
+  // Thông tin kho & số lượng
   unit: string;              // Đơn vị tính
   quantity: number | string; // Số lượng
-  warehouseLocation: string; // Vị trí kho (quét hoặc điền, chuỗi đơn thuần)
+  warehouseLocation: string; // Vị trí kho (location)
+  warehouseCode?: string;    // Mã kho (mặc định FGW)
+  scannedBy?: string;        // Người quét (mặc định 105)
 
-  status: TicketStatus;
-  notes?: string;
+  // Ghi chú (được yêu cầu thêm)
+  notes: string;
+
+  status?: TicketStatus;     // Optional (bỏ khỏi form tạo phiếu)
+  mesSyncStatus?: 'synced' | 'failed' | 'pending';
+  mesSyncError?: string;
 }
 
 export interface Ticket {

@@ -7,16 +7,16 @@ import {
   CheckCircle2,
   Trash2,
   Save,
+  Loader2,
   MapPin,
+  FileText,
 } from 'lucide-react';
-import { MaterialTicket, TicketStatus } from '../types';
+import { MaterialTicket } from '../types';
 import {
   parseMaterialQr,
   SAMPLE_MATERIAL_QRS,
-  COMMON_UNITS,
   SAMPLE_WAREHOUSE_LOCATIONS,
 } from '../utils/materialQrParser';
-import { generateMaterialTicketCode } from '../utils/materialTicketStorage';
 
 interface MaterialTicketCreateModalProps {
   isOpen: boolean;
@@ -25,9 +25,10 @@ interface MaterialTicketCreateModalProps {
   onOpenLocationScanner: () => void;
   scannedMaterialQr: string | null;
   scannedLocationQr: string | null;
-  onSaveTicket: (ticket: MaterialTicket) => void;
+  onSaveTicket: (ticket: MaterialTicket) => Promise<void> | void;
   onClearScannedMaterialQr: () => void;
   onClearScannedLocationQr: () => void;
+  isSaving?: boolean;
 }
 
 export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps> = ({
@@ -40,8 +41,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   onSaveTicket,
   onClearScannedMaterialQr,
   onClearScannedLocationQr,
+  isSaving = false,
 }) => {
-  const [ticketCode, setTicketCode] = useState('');
   const [rawQr, setRawQr] = useState('');
 
   // 6 fields from QR
@@ -52,20 +53,22 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   const [batchNumber, setBatchNumber] = useState('');
   const [productionOrder, setProductionOrder] = useState('');
 
-  // 3 additional fields
+  // Warehouse & quantity fields
   const [unit, setUnit] = useState('Cuộn');
   const [quantity, setQuantity] = useState<string | number>('1');
-  const [warehouseLocation, setWarehouseLocation] = useState('');
+  const [warehouseLocation, setWarehouseLocation] = useState('A1-02');
+  const [warehouseCode, setWarehouseCode] = useState('FGW');
+  const [scannedBy, setScannedBy] = useState('105');
 
-  // Status
-  const [status, setStatus] = useState<TicketStatus>('completed');
+  // Ghi chú (yêu cầu thêm)
   const [notes, setNotes] = useState('');
+
   const [isParsed, setIsParsed] = useState(false);
+  const [localSaving, setLocalSaving] = useState(false);
 
   // Reset form when opened fresh
   useEffect(() => {
     if (isOpen) {
-      setTicketCode(generateMaterialTicketCode());
       if (!scannedMaterialQr) {
         setRawQr('');
         setMaterialCode('');
@@ -76,8 +79,9 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         setProductionOrder('');
         setUnit('Cuộn');
         setQuantity('1');
-        setWarehouseLocation('');
-        setStatus('completed');
+        setWarehouseLocation('A1-02');
+        setWarehouseCode('FGW');
+        setScannedBy('105');
         setNotes('');
         setIsParsed(false);
       }
@@ -124,37 +128,45 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
     onClearScannedMaterialQr();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (localSaving || isSaving) return;
 
-    const newTicket: MaterialTicket = {
-      id: `mat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      code: ticketCode.trim() || generateMaterialTicketCode(),
-      createdAt: Date.now(),
-      rawQr: rawQr.trim(),
-      materialCode: materialCode.trim(),
-      color: color.trim(),
-      size: size.trim(),
-      length: length.trim(),
-      batchNumber: batchNumber.trim(),
-      productionOrder: productionOrder.trim(),
-      unit: unit.trim() || 'Cuộn',
-      quantity: quantity || '1',
-      warehouseLocation: warehouseLocation.trim(),
-      status,
-      notes: notes.trim(),
-    };
+    setLocalSaving(true);
+    try {
+      const newTicket: MaterialTicket = {
+        id: `mat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: Date.now(),
+        rawQr: rawQr.trim(),
+        materialCode: materialCode.trim(),
+        color: color.trim(),
+        size: size.trim(),
+        length: length.trim(),
+        batchNumber: batchNumber.trim(),
+        productionOrder: productionOrder.trim(),
+        unit: unit.trim() || 'Cuộn',
+        quantity: quantity || '1',
+        warehouseLocation: warehouseLocation.trim() || 'A1-02',
+        warehouseCode: warehouseCode.trim() || 'FGW',
+        scannedBy: scannedBy.trim() || '105',
+        notes: notes.trim(),
+      };
 
-    onSaveTicket(newTicket);
-    onClose();
+      await onSaveTicket(newTicket);
+      onClose();
+    } finally {
+      setLocalSaving(false);
+    }
   };
 
   if (!isOpen) return null;
 
+  const submitting = localSaving || isSaving;
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-3 bg-black/60 backdrop-blur-xs">
-        <div className="fixed inset-0" onClick={onClose} />
+        <div className="fixed inset-0" onClick={submitting ? undefined : onClose} />
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -162,12 +174,12 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
           exit={{ opacity: 0, y: 30 }}
           className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] sm:max-h-[90vh] text-slate-900 dark:text-slate-100 overflow-hidden"
         >
-          {/* Header */}
+          {/* Header - Bỏ cột mã phiếu, trạng thái */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {ticketCode}
-              </span>
+              <div className="h-7 w-7 rounded-lg bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <FileText className="h-4 w-4" />
+              </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Tạo phiếu vật tư
               </h3>
@@ -176,8 +188,9 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
             <button
               id="btn-close-material-modal"
               type="button"
+              disabled={submitting}
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -190,7 +203,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
               <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
                 <span className="flex items-center gap-1.5">
                   <QrCode className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  Mã QR (dấu ^^ hoặc -)
+                  Mã QR vật tư
                 </span>
                 {rawQr && (
                   <button
@@ -240,7 +253,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                 ))}
                 {isParsed && (
                   <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    <CheckCircle2 className="h-3 w-3" /> Đã tách 6 trường
+                    <CheckCircle2 className="h-3 w-3" /> Đã bóc tách 6 trường
                   </span>
                 )}
               </div>
@@ -250,7 +263,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
             <div>
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                6 trường từ mã QR
+                6 trường thông tin vật tư
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -268,7 +281,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     required
                     value={materialCode}
                     onChange={(e) => setMaterialCode(e.target.value)}
-                    placeholder="Mã VT"
+                    placeholder="VD: VT-COTTON-01"
                     className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -333,14 +346,14 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     htmlFor="field-batch-number"
                     className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5"
                   >
-                    5. Lô sản xuất
+                    5. Lô sản xuất (Lot)
                   </label>
                   <input
                     id="field-batch-number"
                     type="text"
                     value={batchNumber}
                     onChange={(e) => setBatchNumber(e.target.value)}
-                    placeholder="Lô SX"
+                    placeholder="VD: LOT20260917"
                     className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -358,14 +371,14 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     type="text"
                     value={productionOrder}
                     onChange={(e) => setProductionOrder(e.target.value)}
-                    placeholder="Lệnh SX"
+                    placeholder="VD: PO-8888"
                     className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
             </div>
 
-            {/* 3. 3 TRƯỜNG BỔ SUNG */}
+            {/* 3. THÔNG TIN KHO, SỐ LƯỢNG & GHI CHÚ */}
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -456,15 +469,16 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   htmlFor="input-warehouse-location"
                   className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
                 >
-                  Vị trí kho (quét hoặc điền)
+                  Vị trí kho (location) <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
                     id="input-warehouse-location"
                     type="text"
+                    required
                     value={warehouseLocation}
                     onChange={(e) => setWarehouseLocation(e.target.value)}
-                    placeholder="VD: KHO-A1-KE02"
+                    placeholder="VD: A1-02"
                     className="flex-1 h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                   <button
@@ -492,23 +506,89 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   ))}
                 </div>
               </div>
+
+              {/* Mã kho & Người quét (cho API MES) */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label
+                    htmlFor="input-warehouse-code"
+                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+                  >
+                    Mã kho (warehouseCode)
+                  </label>
+                  <input
+                    id="input-warehouse-code"
+                    type="text"
+                    value={warehouseCode}
+                    onChange={(e) => setWarehouseCode(e.target.value)}
+                    placeholder="FGW"
+                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="input-scanned-by"
+                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+                  >
+                    Mã người quét (scannedBy)
+                  </label>
+                  <input
+                    id="input-scanned-by"
+                    type="text"
+                    value={scannedBy}
+                    onChange={(e) => setScannedBy(e.target.value)}
+                    placeholder="105"
+                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* CỘT GHI CHÚ - Yêu cầu người dùng */}
+              <div>
+                <label
+                  htmlFor="input-ticket-notes"
+                  className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1 flex items-center justify-between"
+                >
+                  <span>Ghi chú</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Tùy chọn</span>
+                </label>
+                <textarea
+                  id="input-ticket-notes"
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Nhập ghi chú cho vật tư (nếu có)..."
+                  className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden resize-none"
+                />
+              </div>
             </div>
 
             {/* Actions */}
             <div className="pt-2 flex items-center gap-2">
               <button
                 type="button"
+                disabled={submitting}
                 onClick={onClose}
-                className="flex-1 h-11 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="flex-1 h-11 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="flex-[2] h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                disabled={submitting}
+                className="flex-[2] h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 transition-all"
               >
-                <Save className="h-4 w-4" />
-                <span>Lưu phiếu</span>
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Đang gửi MES...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Lưu & Gửi MES</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
