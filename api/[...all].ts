@@ -8,7 +8,7 @@ export default async function handler(req: any, res: any) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
@@ -20,14 +20,22 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  if (req.method !== 'POST') {
-    res.statusCode = 405;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ success: false, error: 'Method Not Allowed' }));
-    return;
-  }
-
   try {
+    // Determine the target path on MES server from req.url
+    // req.url is e.g. /api/FinishedGoodInventory/by-user/105
+    let targetPath = req.url || '';
+    if (!targetPath.startsWith('/api')) {
+      targetPath = `/api${targetPath}`;
+    }
+
+    // Health check endpoint
+    if (targetPath === '/api/health' || targetPath.startsWith('/api/health?')) {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ status: 'ok', time: new Date().toISOString() }));
+      return;
+    }
+
     let payload = req.body;
     if (!payload && req.readable) {
       const chunks: Buffer[] = [];
@@ -43,32 +51,16 @@ export default async function handler(req: any, res: any) {
     }
 
     const result = await requestMesServer(
-      '/api/FinishedGoodInventory',
-      'POST',
+      targetPath,
+      req.method || 'GET',
       payload
     );
 
     res.statusCode = result.status;
     res.setHeader('Content-Type', 'application/json');
-
-    if (result.status >= 200 && result.status < 300) {
-      res.end(
-        JSON.stringify({
-          success: true,
-          data: result.data,
-        })
-      );
-    } else {
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: `MES API returned status ${result.status}`,
-          details: result.data,
-        })
-      );
-    }
+    res.end(JSON.stringify(result.data));
   } catch (error: any) {
-    console.error('Error proxying to MES API:', error);
+    console.error('Error in catch-all MES proxy handler:', error);
     res.statusCode = 502;
     res.setHeader('Content-Type', 'application/json');
     res.end(

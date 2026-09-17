@@ -1,3 +1,5 @@
+import { requestMesServer } from '../_lib/mesClient';
+
 export const config = {
   maxDuration: 15,
 };
@@ -29,24 +31,14 @@ export default async function handler(req: any, res: any) {
   // DELETE
   if (req.method === 'DELETE') {
     try {
-      const mesResponse = await fetch(
-        `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
-        {
-          method: 'DELETE',
-        }
+      const result = await requestMesServer(
+        `/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
+        'DELETE'
       );
 
-      const responseText = await mesResponse.text();
-      let responseData: any;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = { message: responseText };
-      }
-
-      res.statusCode = mesResponse.status;
+      res.statusCode = result.status;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(responseData));
+      res.end(JSON.stringify(result.data));
       return;
     } catch (error: any) {
       console.error('Error deleting from MES API (Vercel):', error);
@@ -80,33 +72,21 @@ export default async function handler(req: any, res: any) {
       }
 
       const { quantity, unit, note } = payload || {};
+      const updatePayload = {
+        quantity: Number(quantity),
+        unit: String(unit || ''),
+        note: String(note || ''),
+      };
 
-      const mesResponse = await fetch(
-        `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            quantity: Number(quantity),
-            unit: String(unit || ''),
-            note: String(note || ''),
-          }),
-        }
+      const result = await requestMesServer(
+        `/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
+        'PUT',
+        updatePayload
       );
 
-      const responseText = await mesResponse.text();
-      let responseData: any;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = { message: responseText };
-      }
-
-      res.statusCode = mesResponse.status;
+      res.statusCode = result.status;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(responseData));
+      res.end(JSON.stringify(result.data));
       return;
     } catch (error: any) {
       console.error('Error updating to MES API (Vercel):', error);

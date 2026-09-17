@@ -1,3 +1,5 @@
+import { requestMesServer } from '../../_lib/mesClient';
+
 export const config = {
   maxDuration: 15,
 };
@@ -29,27 +31,14 @@ export default async function handler(req: any, res: any) {
     const { scannedBy } = req.query || {};
     const userId = scannedBy || '105';
 
-    const mesResponse = await fetch(
-      `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/by-user/${encodeURIComponent(userId)}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      }
+    const result = await requestMesServer(
+      `/api/FinishedGoodInventory/by-user/${encodeURIComponent(userId)}`,
+      'GET'
     );
 
-    const responseText = await mesResponse.text();
-    let responseData: any;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { message: responseText };
-    }
-
-    res.statusCode = mesResponse.status;
+    res.statusCode = result.status;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(responseData));
+    res.end(JSON.stringify(result.data));
   } catch (error: any) {
     console.error('Error fetching from MES API (Vercel):', error);
     res.statusCode = 502;

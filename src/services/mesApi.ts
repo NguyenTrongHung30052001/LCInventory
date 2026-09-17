@@ -49,7 +49,9 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     location: ticket.warehouseLocation?.trim() || 'A1-02',
     scannedBy: ticket.scannedBy?.trim() || '105',
     scannedAt: new Date(ticket.createdAt || Date.now()).toISOString(),
-    qrCode: ticket.rawQr || `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`,
+    qrCode:
+      ticket.rawQr ||
+      `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`,
     materialCode: ticket.materialCode || '',
     color: ticket.color || '',
     size: ticket.size || '',
@@ -71,12 +73,13 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
       body: JSON.stringify(payload),
     });
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && resJson?.success !== false) {
+    if (response.ok && resJson && resJson.success !== false) {
       return {
         success: true,
         message: 'Đã gửi thành công lên hệ thống MES',
@@ -85,7 +88,6 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     } else {
       let errMsg = resJson?.error || resJson?.message;
       if (response.status === 404) {
-        const host = typeof window !== 'undefined' ? window.location.host : '';
         errMsg = `Không tìm thấy API ${proxyUrl} (Lỗi 404).`;
       } else if (!errMsg) {
         errMsg = `Máy chủ MES trả về mã ${response.status}`;
@@ -105,6 +107,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
         headers: {
           'Content-Type': 'application/json',
         },
+        cache: 'no-store',
         body: JSON.stringify(payload),
       });
 
@@ -181,23 +184,26 @@ export async function fetchInventoryByUser(
       headers: {
         Accept: 'application/json',
       },
+      cache: 'no-store',
     });
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && resJson?.success !== false) {
-      const list = Array.isArray(resJson?.data) ? resJson.data : [];
+    if (response.ok && resJson && resJson.success !== false) {
+      const list = Array.isArray(resJson.data)
+        ? resJson.data
+        : Array.isArray(resJson)
+        ? resJson
+        : [];
       return {
         success: true,
         data: transformItems(list),
       };
-    } else {
-      return {
-        success: false,
-        data: [],
-        error: resJson?.error || resJson?.message || `Lỗi tải danh sách (mã ${response.status})`,
-      };
     }
+
+    // If proxy failed or returned error structure
+    const proxyError = resJson?.error || resJson?.message || `Lỗi tải danh sách (mã ${response.status})`;
+    throw new Error(proxyError);
   } catch (err: any) {
     console.warn('Proxy fetch by-user failed, fallback to direct fetch...', err);
     try {
@@ -208,11 +214,16 @@ export async function fetchInventoryByUser(
           headers: {
             Accept: 'application/json',
           },
+          cache: 'no-store',
         }
       );
       const directJson = await directRes.json();
-      if (directRes.ok && directJson?.success !== false) {
-        const list = Array.isArray(directJson?.data) ? directJson.data : [];
+      if (directRes.ok && directJson && directJson.success !== false) {
+        const list = Array.isArray(directJson.data)
+          ? directJson.data
+          : Array.isArray(directJson)
+          ? directJson
+          : [];
         return {
           success: true,
           data: transformItems(list),
@@ -259,23 +270,21 @@ export async function updateInventoryItem(
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
       body: JSON.stringify(bodyData),
     });
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && resJson?.success !== false) {
+    if (response.ok && resJson && resJson.success !== false) {
       return {
         success: true,
         message: resJson?.message || 'Đã cập nhật bản ghi kiểm kê thành công',
         data: resJson?.data,
       };
-    } else {
-      return {
-        success: false,
-        error: resJson?.error || resJson?.message || `Lỗi cập nhật (mã ${response.status})`,
-      };
     }
+
+    throw new Error(resJson?.error || resJson?.message || `Lỗi cập nhật (mã ${response.status})`);
   } catch (err: any) {
     console.warn('Proxy update failed, fallback to direct fetch...', err);
     try {
@@ -286,11 +295,12 @@ export async function updateInventoryItem(
           headers: {
             'Content-Type': 'application/json',
           },
+          cache: 'no-store',
           body: JSON.stringify(bodyData),
         }
       );
       const directJson = await directRes.json().catch(() => null);
-      if (directRes.ok && directJson?.success !== false) {
+      if (directRes.ok && directJson && directJson.success !== false) {
         return {
           success: true,
           message: directJson?.message || 'Đã cập nhật bản ghi thành công',
@@ -323,21 +333,19 @@ export async function deleteInventoryItem(id: string | number): Promise<MesApiRe
   try {
     const response = await fetch(proxyUrl, {
       method: 'DELETE',
+      cache: 'no-store',
     });
 
     const resJson = await response.json().catch(() => null);
 
-    if (response.ok && resJson?.success !== false) {
+    if (response.ok && resJson && resJson.success !== false) {
       return {
         success: true,
         message: resJson?.message || 'Đã xóa bản ghi kiểm kê thành công',
       };
-    } else {
-      return {
-        success: false,
-        error: resJson?.error || resJson?.message || `Lỗi xóa (mã ${response.status})`,
-      };
     }
+
+    throw new Error(resJson?.error || resJson?.message || `Lỗi xóa (mã ${response.status})`);
   } catch (err: any) {
     console.warn('Proxy delete failed, fallback to direct fetch...', err);
     try {
@@ -345,10 +353,11 @@ export async function deleteInventoryItem(id: string | number): Promise<MesApiRe
         `http://mes.lienchau.vn:5092/api/FinishedGoodInventory/${encodeURIComponent(id)}`,
         {
           method: 'DELETE',
+          cache: 'no-store',
         }
       );
       const directJson = await directRes.json().catch(() => null);
-      if (directRes.ok && directJson?.success !== false) {
+      if (directRes.ok && directJson && directJson.success !== false) {
         return {
           success: true,
           message: directJson?.message || 'Đã xóa bản ghi kiểm kê thành công',
