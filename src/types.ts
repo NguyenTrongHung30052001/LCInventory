@@ -20,6 +20,31 @@ export interface ScanResult {
   };
 }
 
+export type TicketCategory =
+  | 'inventory'
+  | 'payment'
+  | 'warranty'
+  | 'event'
+  | 'delivery'
+  | 'general';
+
+export type TicketStatus = 'pending' | 'completed' | 'cancelled';
+
+export interface Ticket {
+  id: string;
+  code: string;
+  title: string;
+  category: TicketCategory;
+  qrData: string;
+  qrType?: ScanType;
+  qrMetadata?: Record<string, any>;
+  customerName?: string;
+  amount?: string;
+  status: TicketStatus;
+  notes?: string;
+  createdAt: number;
+}
+
 export interface ScannerSettings {
   beepOnScan: boolean;
   vibrateOnScan: boolean;
@@ -30,3 +55,4 @@ export interface ScannerSettings {
 }
 
 export type ScanMode = 'camera' | 'upload';
+
