@@ -176,6 +176,7 @@ export default function App() {
           onModeChange={setMode}
           onScanDetected={handleScanDetected}
           onOpenSampleModal={() => setIsSamplesOpen(true)}
+          isScanningPaused={Boolean(activeResult) || isHistoryOpen || isSettingsOpen || isSamplesOpen}
         />
       </main>
 
