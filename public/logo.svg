@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 460" width="100%" height="100%">
+  <defs>
+    <style>
+      .lc-green { fill: #1f8354; }
+      .lc-text-dark { fill: #334752; font-family: 'Times New Roman', Times, serif; }
+      .lc-brand { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; letter-spacing: 2px; }
+    </style>
+  </defs>
+
+  <!-- Lien Chau Emblem -->
+  <g class="lc-green">
+    <!-- Main Left Crescent Leaf -->
+    <path d="M 268 4 C 235 48 185 110 142 166 C 112 205 92 248 106 288 C 122 334 178 350 250 340 C 215 330 185 310 162 284 C 140 258 135 228 145 198 C 158 158 195 106 238 62 C 248 50 258 38 268 28 C 267 22 267 12 268 4 Z" />
+    
+    <!-- Inner Right Blade -->
+    <path d="M 269 4 C 265 24 246 64 220 115 C 190 174 162 240 160 292 C 160 304 162 316 166 328 C 202 338 240 318 264 250 C 262 236 250 240 240 244 C 214 254 185 246 178 206 C 172 168 196 112 232 54 C 248 30 262 14 269 4 Z" />
+    
+    <!-- Bottom Underline Swoosh -->
+    <path d="M 135 376 C 170 364 210 360 260 366 C 240 369 200 373 170 380 C 155 383 142 380 135 376 Z" />
+  </g>
+
+  <!-- LIÊN CHÂU Text -->
+  <text x="200" y="415" text-anchor="middle" class="lc-green lc-brand" font-size="44" letter-spacing="4">LIÊN CHÂU</text>
+  
+  <!-- Go With You Slogan -->
+  <text x="200" y="448" text-anchor="middle" class="lc-text-dark" font-size="24" letter-spacing="2">Go With You</text>
+</svg>

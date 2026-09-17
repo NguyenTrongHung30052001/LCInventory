@@ -16,7 +16,6 @@ import {
   Trash2,
   MapPin,
   Download,
-  Package,
   X,
   FileText,
 } from 'lucide-react';
@@ -24,8 +23,11 @@ import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
 import { MaterialTicketDetailModal } from './components/MaterialTicketDetailModal';
 import { DirectCameraModal } from './components/DirectCameraModal';
+import { VersionInfoModal } from './components/VersionInfoModal';
+import { LienChauLogo } from './components/LienChauLogo';
 import { Toast } from './components/Toast';
 import { MaterialTicket } from './types';
+import { APP_VERSION } from './config/version';
 import {
   getStoredMaterialTickets,
   saveStoredMaterialTickets,
@@ -47,6 +49,7 @@ export default function App() {
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const [scannerTarget, setScannerTarget] = useState<'material' | 'location'>('material');
   const [viewingTicket, setViewingTicket] = useState<MaterialTicket | null>(null);
 
@@ -102,7 +105,7 @@ export default function App() {
     }
   };
 
-  // Save new material ticket & call MES API: http://mes.lienchau.vn:5173/api/FinishedGoodInventory
+  // Save new material ticket & call MES API: http://mes.lienchau.vn:5092/api/FinishedGoodInventory
   const handleSaveTicket = async (newTicket: MaterialTicket) => {
     setIsSaving(true);
     try {
@@ -272,8 +275,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors pb-10">
-      {/* App Header */}
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors pb-6">
+      {/* App Header with Liên Châu Logo and Version indicator */}
       <Header
         ticketCount={tickets.length}
         beepEnabled={beepEnabled}
@@ -289,6 +292,7 @@ export default function App() {
           setIsCreateModalOpen(true);
           handleOpenMaterialScanner();
         }}
+        onOpenVersionModal={() => setIsVersionModalOpen(true)}
       />
 
       {/* Main Mobile Screen */}
@@ -370,16 +374,16 @@ export default function App() {
         {/* 4. TICKET CARDS LIST (MOBILE OPTIMIZED) - Không có đơn ảo, mặc định để trống */}
         <div className="space-y-2.5 pt-1">
           {filteredTickets.length === 0 ? (
-            /* Empty State */
+            /* Empty State with Lien Chau Branding */
             <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
-                <Package className="h-6 w-6" />
+              <div className="mb-3">
+                <LienChauLogo size="lg" />
               </div>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                 Chưa có phiếu vật tư
               </p>
-              <p className="text-[11px] text-slate-400 mb-4">
-                Bấm nút &quot;Quét QR&quot; hoặc &quot;Tạo phiếu&quot; để thêm phiếu mới.
+              <p className="text-[11px] text-slate-400 mb-4 max-w-xs">
+                Đưa camera quét mã QR trên cuộn vải/vật tư để tự động nhập dữ liệu vào phiếu.
               </p>
               <button
                 type="button"
@@ -520,6 +524,27 @@ export default function App() {
             ))
           )}
         </div>
+
+        {/* 5. PHẦN HIỂN THỊ PHIÊN BẢN & THỜI GIAN CẬP NHẬT (BOTTOM FOOTER) */}
+        <div className="pt-3 pb-1 text-center">
+          <button
+            type="button"
+            onClick={() => setIsVersionModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 transition-colors shadow-2xs group"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-slate-700 dark:text-slate-200">
+              Liên Châu MES
+            </span>
+            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 rounded">
+              {APP_VERSION.version}
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="font-mono text-[10px]">
+              Cập nhật: {APP_VERSION.updatedAt}
+            </span>
+          </button>
+        </div>
       </main>
 
       {/* MODAL 1: MATERIAL TICKET CREATION FORM */}
@@ -569,6 +594,12 @@ export default function App() {
         onDeleteTicket={handleDeleteTicket}
         onCopyText={handleCopyText}
         onResendToMes={handleResendToMes}
+      />
+
+      {/* MODAL 4: VERSION INFO MODAL */}
+      <VersionInfoModal
+        isOpen={isVersionModalOpen}
+        onClose={() => setIsVersionModalOpen(false)}
       />
 
       {/* TOAST NOTIFICATION */}
