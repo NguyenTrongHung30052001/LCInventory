@@ -53,9 +53,15 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     notes: ticket.notes || '',
   };
 
-  // Attempt 1: Call through internal Express proxy /api/FinishedGoodInventory
+  // Attempt 1: Call through internal proxy /api/FinishedGoodInventory (works on Cloud Run & Vercel Serverless)
   try {
-    const response = await fetch('/api/FinishedGoodInventory', {
+    const metaEnv = (import.meta as any)?.env;
+    const apiBase = metaEnv?.VITE_API_BASE_URL
+      ? String(metaEnv.VITE_API_BASE_URL).replace(/\/$/, '')
+      : '';
+    const proxyUrl = apiBase ? `${apiBase}/api/FinishedGoodInventory` : '/api/FinishedGoodInventory';
+
+    const response = await fetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,7 +78,14 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
         data: resJson?.data || resJson,
       };
     } else {
-      const errMsg = resJson?.error || resJson?.message || `Máy chủ MES trả về mã ${response.status}`;
+      let errMsg = resJson?.error || resJson?.message;
+      if (response.status === 404) {
+        const host = typeof window !== 'undefined' ? window.location.host : '';
+        errMsg = `Không tìm thấy API ${proxyUrl} (Lỗi 404). Nếu bạn đang mở trên Vercel (${host}), vui lòng đồng bộ (deploy) bản code mới nhất chứa thư mục /api serverless function để Vercel kích hoạt proxy.`;
+      } else if (!errMsg) {
+        errMsg = `Máy chủ MES trả về mã ${response.status}`;
+      }
+
       return {
         success: false,
         error: errMsg,
@@ -82,7 +95,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
   } catch (err: any) {
     console.warn('Proxy request failed, attempting direct fetch fallback...', err);
 
-    // Attempt 2: Direct fetch to http://mes.lienchau.vn:5173/api/FinishedGoodInventory
+    // Attempt 2: Direct fetch to http://mes.lienchau.vn:5092/api/FinishedGoodInventory (if allowed)
     try {
       const directRes = await fetch('http://mes.lienchau.vn:5092/api/FinishedGoodInventory', {
         method: 'POST',
@@ -114,9 +127,14 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
         };
       }
     } catch (directErr: any) {
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const reason = isHttps
+        ? `Trình duyệt chặn kết nối trực tiếp đến http://mes.lienchau.vn:5092 do quy định bảo mật HTTPS (Mixed Content). Vui lòng đảm bảo serverless API /api/FinishedGoodInventory đã được kích hoạt trên Vercel.`
+        : `Không thể kết nối đến máy chủ MES: ${directErr.message || err.message}`;
+
       return {
         success: false,
-        error: `Không thể kết nối đến máy chủ MES: ${directErr.message || err.message}`,
+        error: reason,
       };
     }
   }
