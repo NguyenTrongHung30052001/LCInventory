@@ -36,12 +36,15 @@ export const LocationStepModal: React.FC<LocationStepModalProps> = ({
       if (scannedLocationQr && scannedLocationQr.trim()) {
         setLocationInput(scannedLocationQr.trim());
         setIsFromQr(true);
+      } else if (currentLocation && currentLocation.trim()) {
+        setLocationInput(currentLocation.trim());
+        setIsFromQr(false);
       } else {
         setLocationInput('');
         setIsFromQr(false);
       }
     }
-  }, [isOpen, scannedLocationQr]);
+  }, [isOpen, scannedLocationQr, currentLocation]);
 
   if (!isOpen) return null;
 
