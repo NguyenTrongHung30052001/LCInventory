@@ -65,14 +65,14 @@ export const LocationStepModal: React.FC<LocationStepModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-3 bg-black/60 backdrop-blur-xs">
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm sm:items-center sm:p-4">
         <div className="fixed inset-0" onClick={onClose} />
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
-          className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 flex flex-col text-slate-900 dark:text-slate-100 overflow-hidden"
+          className="relative z-10 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl sm:max-w-sm rounded-t-[2rem] sm:rounded-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] border-t sm:border border-white/20 dark:border-slate-800 flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100 overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/80">

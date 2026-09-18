@@ -491,22 +491,22 @@ export default function App() {
     switch (status) {
       case 'synced':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            <CheckCircle2 className="h-2.5 w-2.5" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700/50 backdrop-blur-sm shadow-sm">
+            <CheckCircle2 className="h-3 w-3" />
             Đã gửi MES
           </span>
         );
       case 'failed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-            <AlertCircle className="h-2.5 w-2.5" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100/80 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300 border border-rose-200/60 dark:border-rose-700/50 backdrop-blur-sm shadow-sm">
+            <AlertCircle className="h-3 w-3" />
             Lỗi gửi MES
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            <Clock className="h-2.5 w-2.5" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100/80 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
+            <Clock className="h-3 w-3" />
             Đã lưu
           </span>
         );
@@ -514,7 +514,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-emerald-50/40 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20 dark:text-slate-100 flex flex-col font-sans transition-colors pb-8 selection:bg-emerald-500/30">
       {/* App Header with Liên Châu Logo and Version indicator */}
       <Header
         ticketCount={tickets.length}
@@ -527,33 +527,34 @@ export default function App() {
       />
 
       {/* Main Mobile Screen */}
-      <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-3.5 py-3 space-y-3">
+      <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-4 py-4 space-y-4">
         {/* SEARCH INPUT */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <div className="space-y-3">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-emerald-400/20 rounded-full blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
             <input
               id="input-mobile-search"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm mã VT, màu, size, lô, vị trí, ghi chú..."
-              className="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs"
+              className="w-full h-12 pl-11 pr-10 rounded-full glass-panel text-[13px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50 transition-all relative z-10"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {/* Clean Action Bar: Ticket count & Refresh button (không hiển thị mã user và mã kho trên UI) */}
-          <div className="flex items-center justify-between px-1 text-xs">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between px-2 text-xs">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wide">
               Danh sách kiểm kê ({tickets.length} phiếu)
             </span>
 
@@ -561,11 +562,11 @@ export default function App() {
               type="button"
               onClick={() => loadInventory(scannedByUserId)}
               disabled={isLoadingList}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-colors disabled:opacity-50 shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:border-emerald-200/60 dark:hover:border-emerald-800/60 transition-all disabled:opacity-50"
               title="Tải lại danh sách từ máy chủ MES"
             >
               <RefreshCw
-                className={`h-3 w-3 ${isLoadingList ? 'animate-spin text-emerald-600' : ''}`}
+                className={`h-3.5 w-3.5 ${isLoadingList ? 'animate-spin text-emerald-600' : ''}`}
               />
               <span>Làm mới</span>
             </button>
@@ -574,12 +575,12 @@ export default function App() {
 
         {/* API Error Notification */}
         {listError && (
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
-            <span>{listError}</span>
+          <div className="p-3.5 rounded-2xl glass-panel !bg-rose-50/80 dark:!bg-rose-950/40 !border-rose-200 dark:!border-rose-900 text-rose-800 dark:text-rose-200 text-[13px] flex items-center justify-between gap-3 shadow-rose-900/5">
+            <span className="font-medium">{listError}</span>
             <button
               type="button"
               onClick={() => loadInventory(scannedByUserId)}
-              className="text-[11px] font-bold underline shrink-0 hover:text-amber-950 dark:hover:text-amber-100"
+              className="text-xs font-bold underline shrink-0 hover:text-rose-950 dark:hover:text-rose-100 px-2 py-1"
             >
               Thử lại
             </button>
@@ -587,25 +588,25 @@ export default function App() {
         )}
 
         {/* TICKET CARDS LIST (MOBILE OPTIMIZED) - CHỈ LẤY DANH SÁCH TỪ API */}
-        <div className="space-y-2.5 pt-1">
+        <div className="space-y-3 pt-1">
           {isLoadingList && tickets.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
-              <p className="text-xs text-slate-500">
-                Đang tải danh sách kiểm kê từ máy chủ MES...
+            <div className="p-10 rounded-3xl glass-panel text-center flex flex-col items-center justify-center animate-pulse">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mb-3" />
+              <p className="text-sm font-medium text-slate-500">
+                Đang tải dữ liệu từ MES...
               </p>
             </div>
           ) : filteredTickets.length === 0 ? (
             /* Empty State with Lien Chau Branding */
-            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center">
-              <div className="mb-3">
+            <div className="p-10 rounded-3xl glass-panel text-center flex flex-col items-center justify-center">
+              <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full border border-emerald-100 dark:border-emerald-800/50">
                 <LienChauLogo size="lg" />
               </div>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">
-                Chưa có phiếu vật tư kiểm kê
+              <p className="text-base font-black text-slate-800 dark:text-slate-200 mb-1">
+                Chưa có phiếu kiểm kê
               </p>
-              <p className="text-[11px] text-slate-400 mb-4 max-w-xs">
-                Đưa camera quét mã QR trên cuộn vải/vật tư để tạo và gửi dữ liệu vào MES.
+              <p className="text-xs text-slate-500 mb-6 max-w-[250px] leading-relaxed">
+                Đưa camera quét mã QR trên cuộn vải hoặc vật tư để tạo và gửi dữ liệu vào MES.
               </p>
               <button
                 type="button"
@@ -615,28 +616,29 @@ export default function App() {
                   setIsCreateModalOpen(true);
                   handleOpenMaterialScanner();
                 }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all duration-200"
               >
-                <Camera className="h-4 w-4" />
-                <span>Quét mã QR ngay</span>
+                <Camera className="h-5 w-5" />
+                <span className="tracking-wide">Quét mã ngay</span>
               </button>
             </div>
-          ) : (
             filteredTickets.map((t) => (
               <div
                 key={t.id}
                 onClick={() => setViewingTicket(t)}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500/60 active:scale-[0.99] transition-all cursor-pointer space-y-2"
+                className="p-4 rounded-3xl glass-panel hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] transition-all duration-300 cursor-pointer space-y-3.5 relative overflow-hidden group"
               >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-transparent dark:from-emerald-900/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity"></div>
+                
                 {/* Card Top: Item ID, MES Status & Time */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-[11px]">
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 font-mono font-bold text-[11px] shadow-sm">
                       #{t.id}
                     </span>
                     {getMesBadge(t.mesSyncStatus)}
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-500/80 dark:text-slate-400 font-mono font-medium tracking-wide">
                     {new Date(t.createdAt).toLocaleTimeString('vi-VN', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -646,67 +648,67 @@ export default function App() {
                 </div>
 
                 {/* Material Code Title */}
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-none">
+                <div className="relative z-10 pt-1">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 block mb-1">
                     Mã vật tư:
                   </span>
-                  <h3 className="text-sm font-black font-mono text-emerald-700 dark:text-emerald-400 truncate">
+                  <h3 className="text-[17px] font-black font-mono text-emerald-700 dark:text-emerald-400 truncate tracking-tight">
                     {t.materialCode || '(Chưa có mã VT)'}
                   </h3>
                 </div>
 
                 {/* 6 Fields Compact Summary Grid */}
-                <div className="grid grid-cols-3 gap-1.5 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80">
+                <div className="grid grid-cols-3 gap-2.5 text-[11px] p-3 rounded-[1.25rem] bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 relative z-10 shadow-inner">
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
                       Màu:
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                       {t.color || '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
                       Size:
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                       {t.size || '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
                       Length:
                     </span>
-                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block">
                       {t.length || '—'}
                     </span>
                   </div>
-                  <div className="col-span-1">
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                  <div className="col-span-1 pt-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
                       Lô SX:
                     </span>
-                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
+                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300 truncate block">
                       {t.batchNumber || '—'}
                     </span>
                   </div>
-                  <div className="col-span-2">
-                    <span className="text-[9px] text-slate-400 block leading-none mb-0.5">
+                  <div className="col-span-2 pt-0.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
                       Lệnh SX:
                     </span>
-                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 truncate block">
+                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300 truncate block">
                       {t.productionOrder || '—'}
                     </span>
                   </div>
                 </div>
 
                 {/* Mô tả vật tư - Luôn hiển thị ra ngoài */}
-                <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/70 p-2 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-start gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-[12px] text-slate-700 dark:text-slate-300 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-[1.25rem] border border-emerald-100/50 dark:border-emerald-900/30 flex items-start gap-2 relative z-10">
+                  <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 opacity-80" />
                   <div className="min-w-0 flex-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 block leading-tight">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600/70 dark:text-emerald-500/70 block mb-0.5">
                       Mô tả:
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 break-words">
+                    <span className="font-medium text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-snug">
                       {t.notes?.trim() ||
                         [
                           t.materialCode,
@@ -724,18 +726,16 @@ export default function App() {
                 </div>
 
                 {/* Card Bottom: Quantity, Location & Quick actions */}
-                <div className="flex items-center justify-between pt-0.5">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between pt-1 relative z-10">
+                  <div className="flex items-center gap-2.5">
                     {/* Quantity Pill */}
-              
-<span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-mono">
-  {formatQuantity(t.quantity).replace(/\./g, ',')} {t.unit}
-</span>
-
+                    <span className="text-[13px] font-black px-3 py-1 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 dark:from-emerald-900/60 dark:to-teal-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50 font-mono shadow-sm">
+                      {formatQuantity(t.quantity).replace(/\./g, ',')} <span className="text-[10px] font-sans font-bold opacity-80 uppercase ml-0.5">{t.unit}</span>
+                    </span>
 
                     {/* Location Badge */}
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span className="truncate max-w-[110px]">
                         {t.warehouseLocation || 'A1-02'}
                       </span>
@@ -744,7 +744,7 @@ export default function App() {
 
                   {/* Actions: Edit, Delete, Copy, Detail */}
                   <div
-                    className="flex items-center gap-1"
+                    className="flex items-center gap-1 bg-white/60 dark:bg-slate-900/60 rounded-2xl p-1 border border-slate-100 dark:border-slate-800/60 shadow-sm backdrop-blur-sm"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Nút Sửa: Chỉ sửa đơn vị tính, số lượng, ghi chú */}
@@ -754,10 +754,10 @@ export default function App() {
                         e.stopPropagation();
                         setEditingTicket(t);
                       }}
-                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/50 dark:hover:text-emerald-300 transition-all"
                       title="Chỉnh sửa (ĐVT, số lượng, ghi chú)"
                     >
-                      <Edit3 className="h-3.5 w-3.5" />
+                      <Edit3 className="h-4 w-4" />
                     </button>
 
                     {/* Nút Xóa: Gọi API DELETE /api/FinishedGoodInventory/{id} */}
@@ -767,10 +767,10 @@ export default function App() {
                         e.stopPropagation();
                         handleDeleteTicket(t.id);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/50 dark:hover:text-rose-400 transition-all"
                       title="Xóa dòng kiểm kê trên MES"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
 
                     <button
@@ -779,19 +779,19 @@ export default function App() {
                         e.stopPropagation();
                         handleCopyText(t.rawQr || t.materialCode);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800/80 transition-all"
                       title="Sao chép"
                     >
-                      <Copy className="h-3.5 w-3.5" />
+                      <Copy className="h-4 w-4" />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setViewingTicket(t)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                      className="p-2 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/50 transition-all"
                       title="Chi tiết"
                     >
-                      <Eye className="h-3.5 w-3.5" />
+                      <Eye className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
