@@ -127,8 +127,10 @@ export default function App() {
     loadInventory(scannedByUserId);
   }, [loadInventory, scannedByUserId]);
 
-  // Quy trình chuẩn: Bấm Tạo phiếu -> Mở popup điền thông tin vị trí kệ kho (Bước 1)
+  // Quy trình chuẩn: Bấm Tạo phiếu -> Mở popup điền thông tin vị trí kệ kho (Bước 1), vị trí bỏ trống
   const handleStartInventoryFlow = () => {
+    handleSetCurrentLocation('');
+    setScannedLocationQr(null);
     setIsCreateModalOpen(false);
     setIsScannerModalOpen(false);
     setIsLocationModalOpen(true);
@@ -477,6 +479,14 @@ export default function App() {
     );
   });
 
+  const formatQuantity = (qty: number | string | undefined | null) => {
+    if (qty === undefined || qty === null || qty === '') return '0';
+    const str = String(qty).replace(',', '.');
+    const num = parseFloat(str);
+    if (isNaN(num)) return str;
+    return String(num);
+  };
+
   const getMesBadge = (status?: 'synced' | 'failed' | 'pending') => {
     switch (status) {
       case 'synced':
@@ -689,20 +699,36 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Ghi chú hiển thị nếu có */}
-                {t.notes && (
-                  <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2 rounded-xl border border-slate-100 dark:border-slate-800/60 flex items-start gap-1.5">
-                    <FileText className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="line-clamp-2 italic">{t.notes}</span>
+                {/* Mô tả vật tư - Luôn hiển thị ra ngoài */}
+                <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/70 p-2 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-start gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 block leading-tight">
+                      Mô tả:
+                    </span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 break-words">
+                      {t.notes?.trim() ||
+                        [
+                          t.materialCode,
+                          t.color && `Màu: ${t.color}`,
+                          t.size && `Size: ${t.size}`,
+                          t.length && t.length !== '0' && `Dài: ${t.length}`,
+                          t.batchNumber && t.batchNumber !== '_' && `Lô: ${t.batchNumber}`,
+                          t.productionOrder && `LSX: ${t.productionOrder}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' - ') ||
+                        'Chưa có mô tả'}
+                    </span>
                   </div>
-                )}
+                </div>
 
                 {/* Card Bottom: Quantity, Location & Quick actions */}
                 <div className="flex items-center justify-between pt-0.5">
                   <div className="flex items-center gap-2">
                     {/* Quantity Pill */}
-                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                      {t.quantity} {t.unit}
+                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-mono">
+                      {formatQuantity(t.quantity)} {t.unit}
                     </span>
 
                     {/* Location Badge */}

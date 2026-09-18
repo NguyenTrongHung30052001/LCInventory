@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit3, Loader2, Save, FileText, Hash, Package } from 'lucide-react';
-import { MaterialTicket } from '../types';
+import { MaterialTicket, ALLOWED_UNITS } from '../types';
 
 interface EditInventoryModalProps {
   isOpen: boolean;
@@ -9,8 +9,6 @@ interface EditInventoryModalProps {
   onSave: (id: string, updatedData: { quantity: number; unit: string; note: string }) => Promise<boolean>;
 }
 
-const COMMON_UNITS = ['Cuộn', 'Mét', 'Cái', 'Kg', 'Cây', 'Thùng'];
-
 export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   isOpen,
   ticket,
@@ -18,7 +16,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   onSave,
 }) => {
   const [quantity, setQuantity] = useState<number | string>(1);
-  const [unit, setUnit] = useState('Cuộn');
+  const [unit, setUnit] = useState('MET');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -26,7 +24,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   useEffect(() => {
     if (ticket) {
       setQuantity(ticket.quantity);
-      setUnit(ticket.unit || 'Cuộn');
+      setUnit(ticket.unit || 'MET');
       setNote(ticket.notes || '');
       setErrorMsg(null);
     }
@@ -38,7 +36,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    const numQty = parseFloat(String(quantity));
+    const numQty = parseFloat(String(quantity).replace(',', '.'));
     if (isNaN(numQty) || numQty <= 0) {
       setErrorMsg('Vui lòng nhập số lượng hợp lệ lớn hơn 0');
       return;
@@ -142,20 +140,28 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
           {/* Editable Field 1: Số lượng */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
               <Hash className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Số lượng kiểm kê thực tế</span>
               <span className="text-rose-500">*</span>
             </label>
             <input
-              type="number"
-              step="any"
-              min="0.001"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*[.]?[0-9]*"
               required
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="VD: 120"
-              className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono font-bold text-base focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              onChange={(e) => {
+                let val = e.target.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                const dotParts = val.split('.');
+                if (dotParts.length > 2) {
+                  val = dotParts[0] + '.' + dotParts.slice(1).join('');
+                }
+                setQuantity(val);
+                if (errorMsg) setErrorMsg(null);
+              }}
+              placeholder="VD: 120.5"
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -166,24 +172,27 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               <span>Đơn vị tính</span>
               <span className="text-rose-500">*</span>
             </label>
-            <input
-              type="text"
-              required
+            <select
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
-              placeholder="VD: Cuộn, Mét, Kg..."
-              className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-semibold text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-            />
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {ALLOWED_UNITS.map((u) => (
+                <option key={u} value={u} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold">
+                  {u}
+                </option>
+              ))}
+            </select>
             {/* Quick unit pills */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {COMMON_UNITS.map((u) => (
+            <div className="grid grid-cols-4 gap-1.5 mt-2">
+              {ALLOWED_UNITS.map((u) => (
                 <button
                   key={u}
                   type="button"
                   onClick={() => setUnit(u)}
-                  className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
+                  className={`text-xs py-1.5 rounded-lg border text-center font-bold transition-all ${
                     unit === u
-                      ? 'bg-emerald-600 text-white border-emerald-600 font-bold'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
                   }`}
                 >
@@ -193,18 +202,18 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
             </div>
           </div>
 
-          {/* Editable Field 3: Ghi chú */}
+          {/* Editable Field 3: Mô tả / Ghi chú */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Ghi chú kiểm kê</span>
+              <span>Mô tả / Ghi chú kiểm kê</span>
             </label>
             <textarea
               rows={3}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Nhập ghi chú (VD: Đã kiểm đếm lại theo phiếu kiểm kê thực tế)..."
-              className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 resize-none"
+              placeholder="Nhập mô tả hoặc ghi chú (VD: Đã kiểm đếm lại theo thực tế)..."
+              className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 resize-none font-medium"
             />
           </div>
 

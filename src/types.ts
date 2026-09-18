@@ -30,6 +30,9 @@ export type TicketCategory =
 
 export type TicketStatus = 'pending' | 'completed' | 'cancelled';
 
+export const ALLOWED_UNITS = ['MET', 'KG', 'PCS', 'PAIR'] as const;
+export type InventoryUnit = (typeof ALLOWED_UNITS)[number];
+
 export interface MaterialTicket {
   id: string;
   code?: string; // Optional (removed from creation form per user request)

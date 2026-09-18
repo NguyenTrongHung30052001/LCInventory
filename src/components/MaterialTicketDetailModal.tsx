@@ -90,7 +90,7 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
                   Số lượng
                 </span>
                 <p className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                  {ticket.quantity} {ticket.unit}
+                  {String(ticket.quantity).replace(',', '.')} {ticket.unit}
                 </p>
               </div>
             </div>
@@ -183,17 +183,27 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
               </span>
             </div>
 
-            {/* Ghi chú */}
-            {ticket.notes && (
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
-                  Ghi chú:
-                </span>
-                <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
-                  {ticket.notes}
-                </p>
-              </div>
-            )}
+            {/* Mô tả / Ghi chú - luôn hiển thị */}
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                Mô tả / Ghi chú:
+              </span>
+              <p className="text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap">
+                {ticket.notes?.trim() ||
+                  [
+                    ticket.materialCode,
+                    ticket.color && `Màu: ${ticket.color}`,
+                    ticket.size && `Size: ${ticket.size}`,
+                    ticket.length && ticket.length !== '0' && `Dài: ${ticket.length}`,
+                    ticket.batchNumber && ticket.batchNumber !== '_' && `Lô: ${ticket.batchNumber}`,
+                    ticket.productionOrder && `LSX: ${ticket.productionOrder}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' - ') ||
+                  'Chưa có mô tả'}
+              </p>
+            </div>
 
             {/* QR String */}
             {ticket.rawQr && (

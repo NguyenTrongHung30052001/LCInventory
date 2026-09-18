@@ -58,7 +58,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     length: ticket.length || '',
     lotNumber: ticket.batchNumber || '',
     productionOrder: ticket.productionOrder || '',
-    unit: ticket.unit || 'Cuộn',
+    unit: ticket.unit || 'MET',
     quantity: numericQty,
     note: noteVal,
     notes: noteVal,
@@ -170,7 +170,7 @@ export async function fetchInventoryByUser(
       length: item.length || '',
       batchNumber: item.lotNumber || '',
       productionOrder: item.productionOrder || '',
-      unit: item.unit || 'Cuộn',
+      unit: item.unit || 'MET',
       quantity: typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity) || 1,
       warehouseLocation: item.location || '',
       warehouseCode: item.warehouseCode || 'FGW',
@@ -262,7 +262,7 @@ export async function updateInventoryItem(
 
   const bodyData = {
     quantity: Number(data.quantity),
-    unit: String(data.unit || 'Cuộn'),
+    unit: String(data.unit || 'MET'),
     note: String(data.note || ''),
   };
 

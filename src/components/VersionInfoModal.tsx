@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, CheckCircle2, Clock, Server, Sparkles, ShieldCheck, Tag } from 'lucide-react';
+import { X, Clock, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION } from '../config/version';
 import { LienChauLogo } from './LienChauLogo';
 
@@ -89,36 +89,19 @@ export const VersionInfoModal: React.FC<VersionInfoModalProps> = ({ isOpen, onCl
                   {APP_VERSION.updatedDate}
                 </span>
               </div>
-
-              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Server className="h-3.5 w-3.5 text-emerald-600" />
-                    Hệ thống MES
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Cổng 5092
-                  </span>
-                </div>
-                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                  {APP_VERSION.mesApi}
-                </div>
-              </div>
             </div>
 
             {/* Release notes summary */}
             <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1 flex items-center gap-1">
                 <Sparkles className="h-3 w-3 text-emerald-600" />
-                Nội dung cập nhật
+                Nội dung cập nhật v1.1.1
               </span>
               <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
-                <li>Hỗ trợ Vercel Serverless Function (/api/FinishedGoodInventory)</li>
-                <li>Khắc phục lỗi 404 &amp; Mixed Content khi deploy trên Vercel</li>
-                <li>Popup cảnh báo chi tiết quy chuẩn 6 trường khi quét mã QR</li>
-                <li>Nhận diện thương hiệu logo chính thức Liên Châu</li>
-                <li>Chuẩn hóa API MES FinishedGoodInventory (Port 5092)</li>
+                <li>Bỏ gợi ý và để trống vị trí khi bấm Tạo phiếu</li>
+                <li>Tối ưu ô nhập số lượng gọn đẹp, mở bàn phím số trên điện thoại</li>
+                <li>Kiểm tra bắt buộc số lượng phải lớn hơn 0</li>
+                <li>Tăng tốc độ phản hồi kết nối API</li>
               </ul>
             </div>
           </div>

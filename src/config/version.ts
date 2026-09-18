@@ -15,12 +15,12 @@ export interface AppVersionInfo {
 }
 
 export const APP_VERSION: AppVersionInfo = {
-  version: 'v1.5.0',
-  buildNumber: '20260917.06',
-  updatedAt: '17/09/2026 20:15',
+  version: 'v1.1.1',
+  buildNumber: '20260917.111',
+  updatedAt: '17/09/2026 21:00',
   updatedDate: '17/09/2026',
-  updatedTime: '20:15:00',
+  updatedTime: '21:00:00',
   author: 'Liên Châu MES Team',
-  releaseNotes: 'Quy trình kiểm kê mới: Quét vị trí trước -> Quét QR vật tư -> Submit tự động mở camera quét tiếp -> Hỗ trợ đổi vị trí linh hoạt',
+  releaseNotes: 'Phiên bản 1.1.1: Tối ưu nhập số lượng bàn phím số, bỏ gợi ý vị trí khi tạo phiếu mới, tăng tốc độ API',
   mesApi: 'http://mes.lienchau.vn:5092/api/FinishedGoodInventory',
 };

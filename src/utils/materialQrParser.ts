@@ -21,6 +21,8 @@ export interface ParsedMaterialQr {
   length: string;
   batchNumber: string;
   productionOrder: string;
+  description: string;
+  detectedUnit?: 'MET' | 'KG' | 'PCS' | 'PAIR';
   isValid: boolean;
   partsCount: number;
   delimiterUsed: '^^' | '-' | '|' | 'none';
@@ -58,6 +60,7 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
       length: '',
       batchNumber: '',
       productionOrder: '',
+      description: '',
       isValid: false,
       partsCount: 0,
       delimiterUsed: 'none',
@@ -96,7 +99,32 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
   const size = parts[2] || '';
   const length = parts[3] || '';
   const batchNumber = parts[4] || '';
-  const productionOrder = parts[5] || (parts.length > 6 ? parts.slice(5).join(' - ') : '');
+  const productionOrder = parts[5] || '';
+
+  // Auto-detect unit if 7th part exists (e.g. ^^M, ^^kg, ^^pcs, ^^pair)
+  let detectedUnit: 'MET' | 'KG' | 'PCS' | 'PAIR' | undefined;
+  if (parts.length > 6) {
+    const rawUnit = parts[6].toUpperCase().trim();
+    if (rawUnit === 'M' || rawUnit === 'MET' || rawUnit === 'MÉT' || rawUnit === 'METER') {
+      detectedUnit = 'MET';
+    } else if (rawUnit === 'KG' || rawUnit === 'KILOGRAM') {
+      detectedUnit = 'KG';
+    } else if (rawUnit === 'PCS' || rawUnit === 'PC' || rawUnit === 'CÁI' || rawUnit === 'PIECE') {
+      detectedUnit = 'PCS';
+    } else if (rawUnit === 'PAIR' || rawUnit === 'ĐÔI' || rawUnit === 'PAIRS') {
+      detectedUnit = 'PAIR';
+    }
+  }
+
+  // Generate clear descriptive text from extracted fields
+  const description = generateMaterialDescription({
+    materialCode,
+    color,
+    size,
+    length,
+    batchNumber,
+    productionOrder,
+  });
 
   const extractedValues = [materialCode, color, size, length, batchNumber, productionOrder];
 
@@ -134,6 +162,8 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
     length,
     batchNumber,
     productionOrder,
+    description,
+    detectedUnit,
     isValid,
     partsCount: parts.length,
     delimiterUsed,
@@ -141,6 +171,43 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
     fieldAnalysis,
     errorReason,
   };
+}
+
+/**
+ * Generate a clean, readable material description from its attributes
+ */
+export function generateMaterialDescription(fields: {
+  materialCode?: string;
+  color?: string;
+  size?: string;
+  length?: string;
+  batchNumber?: string;
+  productionOrder?: string;
+}): string {
+  const parts: string[] = [];
+  if (fields.materialCode?.trim()) {
+    parts.push(fields.materialCode.trim());
+  }
+  if (fields.color?.trim()) {
+    parts.push(`Màu: ${fields.color.trim()}`);
+  }
+  if (fields.size?.trim()) {
+    parts.push(`Size: ${fields.size.trim()}`);
+  }
+  if (fields.length?.trim() && fields.length.trim() !== '0') {
+    parts.push(`Dài: ${fields.length.trim()}`);
+  }
+  if (
+    fields.batchNumber?.trim() &&
+    fields.batchNumber.trim() !== '_' &&
+    fields.batchNumber.trim() !== '0'
+  ) {
+    parts.push(`Lô: ${fields.batchNumber.trim()}`);
+  }
+  if (fields.productionOrder?.trim()) {
+    parts.push(`LSX: ${fields.productionOrder.trim()}`);
+  }
+  return parts.join(' - ');
 }
 
 /**
@@ -235,15 +302,4 @@ export const SAMPLE_WAREHOUSE_LOCATIONS = [
   },
 ];
 
-export const COMMON_UNITS = [
-  'Mét (m)',
-  'Cuộn',
-  'Cây',
-  'Kg',
-  'Cái',
-  'Thùng',
-  'Bộ',
-  'Hộp',
-  'Tấm',
-  'Yards',
-];
+export const COMMON_UNITS = ['MET', 'KG', 'PCS', 'PAIR'];

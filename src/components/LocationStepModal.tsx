@@ -27,7 +27,7 @@ export const LocationStepModal: React.FC<LocationStepModalProps> = ({
   onOpenLocationScanner,
   scannedLocationQr,
 }) => {
-  const [locationInput, setLocationInput] = useState(currentLocation || '');
+  const [locationInput, setLocationInput] = useState('');
   const [isFromQr, setIsFromQr] = useState(false);
 
   // Sync with prop when opened or when scanned QR arrives
@@ -36,15 +36,12 @@ export const LocationStepModal: React.FC<LocationStepModalProps> = ({
       if (scannedLocationQr && scannedLocationQr.trim()) {
         setLocationInput(scannedLocationQr.trim());
         setIsFromQr(true);
-      } else if (currentLocation) {
-        setLocationInput(currentLocation);
-        setIsFromQr(false);
       } else {
         setLocationInput('');
         setIsFromQr(false);
       }
     }
-  }, [isOpen, scannedLocationQr, currentLocation]);
+  }, [isOpen, scannedLocationQr]);
 
   if (!isOpen) return null;
 
@@ -129,7 +126,7 @@ export const LocationStepModal: React.FC<LocationStepModalProps> = ({
                     setIsFromQr(false);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ví dụ: A1-02, K01-B3, KHO-B..."
+                  placeholder=""
                   className="w-full h-11 pl-9 pr-10 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm font-mono font-bold text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-hidden"
                 />
                 {locationInput && (

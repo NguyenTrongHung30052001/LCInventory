@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { MaterialTicket } from '../types';
+import { MaterialTicket, ALLOWED_UNITS } from '../types';
 import { parseMaterialQr } from '../utils/materialQrParser';
 import { ScanErrorInfo } from './ScanErrorModal';
 
@@ -63,9 +63,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   const [productionOrder, setProductionOrder] = useState('');
 
   // Warehouse & quantity fields
-  const [unit, setUnit] = useState('Cuộn');
+  const [unit, setUnit] = useState<string>('MET');
   const [quantity, setQuantity] = useState<string | number>('1');
-  const [warehouseLocation, setWarehouseLocation] = useState(currentLocation || 'A1-02');
+  const [quantityError, setQuantityError] = useState('');
+  const [warehouseLocation, setWarehouseLocation] = useState(currentLocation || '');
 
   // Ghi chú (yêu cầu thêm)
   const [notes, setNotes] = useState('');
@@ -77,9 +78,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   // Reset form when opened fresh, keep warehouse location
   useEffect(() => {
     if (isOpen) {
-      if (currentLocation) {
-        setWarehouseLocation(currentLocation);
-      }
+      setWarehouseLocation(currentLocation || '');
+      setQuantityError('');
       if (!scannedMaterialQr) {
         setRawQr('');
         setMaterialCode('');
@@ -88,7 +88,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         setLength('');
         setBatchNumber('');
         setProductionOrder('');
-        setUnit('Cuộn');
+        setUnit('MET');
         setQuantity('1');
         setNotes('');
         setIsParsed(false);
@@ -122,6 +122,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
     if (parsed.length) setLength(parsed.length);
     if (parsed.batchNumber) setBatchNumber(parsed.batchNumber);
     if (parsed.productionOrder) setProductionOrder(parsed.productionOrder);
+    if (parsed.detectedUnit) setUnit(parsed.detectedUnit);
+    if (parsed.description) setNotes(parsed.description);
   };
 
   const handleClearQr = () => {
@@ -140,6 +142,13 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
     e.preventDefault();
     if (localSaving || isSaving) return;
 
+    const parsedQty = parseFloat(String(quantity).replace(',', '.'));
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      setQuantityError('Số lượng phải lớn hơn 0');
+      return;
+    }
+    setQuantityError('');
+
     setLocalSaving(true);
     try {
       const newTicket: MaterialTicket = {
@@ -152,9 +161,9 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         length: length.trim(),
         batchNumber: batchNumber.trim(),
         productionOrder: productionOrder.trim(),
-        unit: unit.trim() || 'Cuộn',
-        quantity: quantity || '1',
-        warehouseLocation: warehouseLocation.trim() || 'A1-02',
+        unit: unit.trim() || 'MET',
+        quantity: String(parsedQty),
+        warehouseLocation: warehouseLocation.trim(),
         warehouseCode: defaultWarehouseCode.trim() || 'FGW',
         scannedBy: defaultScannedBy.trim() || '105',
         notes: notes.trim(),
@@ -442,7 +451,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
               </div>
 
               {/* Đơn vị tính & Số lượng */}
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5 items-start">
                 <div>
                   <label
                     htmlFor="input-unit"
@@ -450,14 +459,19 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   >
                     Đơn vị tính <span className="text-rose-500">*</span>
                   </label>
-                  <input
+                  <select
                     id="input-unit"
-                    type="text"
                     required
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  />
+                    className="w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden cursor-pointer"
+                  >
+                    {ALLOWED_UNITS.map((u) => (
+                      <option key={u} value={u} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold">
+                        {u}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -467,57 +481,78 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   >
                     Số lượng <span className="text-rose-500">*</span>
                   </label>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cur = parseFloat(String(quantity)) || 1;
-                        if (cur > 1) setQuantity(cur - 1);
-                      }}
-                      className="h-9 w-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center text-sm"
-                    >
-                      -
-                    </button>
-                    <input
-                      id="input-quantity"
-                      type="number"
-                      step="any"
-                      min="0"
-                      required
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      className="flex-1 h-9 px-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-center text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cur = parseFloat(String(quantity)) || 0;
-                        setQuantity(cur + 1);
-                      }}
-                      className="h-9 w-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center text-sm"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <input
+                    id="input-quantity"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.]?[0-9]*"
+                    required
+                    value={quantity}
+                    onChange={(e) => {
+                      // Thay dấu phẩy bằng dấu chấm, chỉ giữ số và tối đa 1 dấu chấm thập phân
+                      let val = e.target.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                      const dotParts = val.split('.');
+                      if (dotParts.length > 2) {
+                        val = dotParts[0] + '.' + dotParts.slice(1).join('');
+                      }
+                      setQuantity(val);
+                      const num = parseFloat(val);
+                      if (val !== '' && !isNaN(num) && num > 0) {
+                        setQuantityError('');
+                      }
+                    }}
+                    placeholder="1.0"
+                    className={`w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:outline-hidden transition-colors ${
+                      quantityError
+                        ? 'border-rose-500 focus:ring-rose-500'
+                        : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500'
+                    }`}
+                  />
+                  {quantityError && (
+                    <p className="mt-1 text-[10px] text-rose-500 font-semibold leading-tight">
+                      {quantityError}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* CỘT GHI CHÚ - Yêu cầu người dùng */}
+              {/* 4 Đơn vị tính nhanh: MET, KG, PCS, PAIR */}
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                {ALLOWED_UNITS.map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => setUnit(u)}
+                    className={`py-1 px-1 rounded-lg text-xs font-bold text-center border transition-all ${
+                      unit === u
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
+                    }`}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+
+              {/* CỘT MÔ TẢ / GHI CHÚ */}
               <div>
                 <label
                   htmlFor="input-ticket-notes"
                   className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1 flex items-center justify-between"
                 >
-                  <span>Ghi chú</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Tùy chọn</span>
+                  <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                    <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Mô tả / Ghi chú
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Tự động điền khi quét</span>
                 </label>
                 <textarea
                   id="input-ticket-notes"
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Nhập ghi chú cho vật tư (nếu có)..."
-                  className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden resize-none"
+                  placeholder="Mô tả vật tư hoặc ghi chú thêm..."
+                  className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden resize-none font-medium"
                 />
               </div>
             </div>
