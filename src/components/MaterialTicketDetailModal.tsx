@@ -113,13 +113,7 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
                 ) : (
                   <Send className="h-4 w-4 text-slate-400 shrink-0" />
                 )}
-                <span className="text-xs font-semibold truncate">
-                  {ticket.mesSyncStatus === 'synced'
-                    ? 'Đã gửi lên MES (FinishedGoodInventory)'
-                    : ticket.mesSyncStatus === 'failed'
-                    ? `Lỗi gửi MES: ${ticket.mesSyncError || 'Không thể kết nối'}`
-                    : 'Đã lưu nội bộ'}
-                </span>
+                
               </div>
               {onResendToMes && ticket.mesSyncStatus === 'failed' && (
                 <button
@@ -255,14 +249,7 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span>In phiếu</span>
-              </button>
+              
             </div>
           </div>
         </motion.div>
