@@ -22,6 +22,8 @@ import {
   Filter,
   Download,
   User,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
@@ -60,6 +62,14 @@ export default function App() {
   const [isLoadingList, setIsLoadingList] = useState<boolean>(true);
   const [listError, setListError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Modal states
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -482,6 +492,12 @@ export default function App() {
     );
   });
 
+  const totalPages = Math.ceil(filteredTickets.length / ITEMS_PER_PAGE);
+  const paginatedTickets = filteredTickets.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const formatQuantity = (qty: number | string | undefined | null) => {
     if (qty === undefined || qty === null || qty === '') return '0';
     const str = String(qty).replace(',', '.');
@@ -586,16 +602,15 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
-          <button type="button" className="hidden flex-1 items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-            <FileText className="h-4 w-4" />
-            Toàn bộ kiểm kê <span className="bg-slate-100 text-slate-600 text-[11px] px-2 py-0.5 rounded-full font-bold">4</span>
-          </button>
-          <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-bold bg-emerald-700 text-white shadow-sm transition-colors">
-            <User className="h-4 w-4" />
-            Phiếu tôi quét <span className="bg-white text-emerald-700 text-[11px] font-black px-2 py-0.5 rounded-full">{tickets.length}</span>
-          </button>
+        {/* Total Tickets Indicator instead of Tabs */}
+        <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-700">
+            <FileText className="h-5 w-5 text-emerald-600" />
+            <span className="font-bold">Tổng số phiếu</span>
+          </div>
+          <span className="bg-emerald-50 text-emerald-700 font-black px-3 py-1 rounded-full border border-emerald-200">
+            {filteredTickets.length}
+          </span>
         </div>
 
         {/* API Error Notification */}
@@ -631,7 +646,7 @@ export default function App() {
               </p>
             </div>
           ) : (
-            filteredTickets.map((t) => (
+            paginatedTickets.map((t) => (
               <div
                 key={t.id}
                 onClick={() => setViewingTicket(t)}
@@ -673,6 +688,31 @@ export default function App() {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 p-3 shadow-sm mt-4">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-semibold text-slate-700">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
 
       </main>
 
