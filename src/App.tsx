@@ -501,6 +501,13 @@ export default function App() {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const getWarehouseName = (code: string) => {
+    const upper = (code || '').toUpperCase();
+    if (upper === 'FGW') return 'Thành phẩm';
+    if (upper === 'RMW') return 'Nguyên liệu';
+    return upper;
+  };
+
   const formatQuantity = (qty: number | string | undefined | null) => {
     if (qty === undefined || qty === null || qty === '') return '0';
     const str = String(qty).replace(',', '.');
@@ -673,7 +680,7 @@ export default function App() {
                 <div className="space-y-2.5 text-[13px] text-slate-500 mb-5 relative z-10">
                   <div className="flex items-center">
                     <Building2 className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                    <span>Kho:</span> <span className="font-bold text-slate-800 ml-1">{t.warehouseCode || warehouseCode || 'FGW'}</span>
+                    <span>Kho:</span> <span className="font-bold text-slate-800 ml-1">{getWarehouseName(t.warehouseCode || warehouseCode || 'FGW')}</span>
                     <span className="text-slate-300 mx-2.5">|</span>
                     <MapPin className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
                     <span>Vị trí:</span> <span className="font-bold text-slate-800 ml-1">{t.warehouseLocation || 'A1-02'}</span>
