@@ -15,8 +15,8 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [quantity, setQuantity] = useState<number | string>(1);
-  const [unit, setUnit] = useState('MET');
+  const [quantity, setQuantity] = useState<number | string>('');
+  const [unit, setUnit] = useState('PCS');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -191,7 +191,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               ))}
             </select>
             {/* Quick unit pills */}
-            <div className="grid grid-cols-4 gap-1.5 mt-2">
+            <div className="grid grid-cols-5 gap-1.5 mt-2">
               {ALLOWED_UNITS.map((u) => (
                 <button
                   key={u}

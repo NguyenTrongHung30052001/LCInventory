@@ -63,8 +63,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   const [productionOrder, setProductionOrder] = useState('');
 
   // Warehouse & quantity fields
-  const [unit, setUnit] = useState<string>('MET');
-  const [quantity, setQuantity] = useState<string | number>('1');
+  const [unit, setUnit] = useState<string>('PCS');
+  const [quantity, setQuantity] = useState<string | number>('');
   const [quantityError, setQuantityError] = useState('');
   const [warehouseLocation, setWarehouseLocation] = useState(currentLocation || '');
 
@@ -88,8 +88,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         setLength('');
         setBatchNumber('');
         setProductionOrder('');
-        setUnit('MET');
-        setQuantity('1');
+        setUnit('PCS');
+        setQuantity('');
         setNotes('');
         setIsParsed(false);
       }
@@ -161,7 +161,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
         length: length.trim(),
         batchNumber: batchNumber.trim(),
         productionOrder: productionOrder.trim(),
-        unit: unit.trim() || 'MET',
+        unit: unit.trim() || 'PCS',
         quantity: String(parsedQty),
         warehouseLocation: warehouseLocation.trim(),
         warehouseCode: defaultWarehouseCode.trim() || 'FGW',
@@ -498,7 +498,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
       const commaParts = val.split(',');
       if (commaParts.length > 2) { val = commaParts[0] + ',' + commaParts.slice(1).join(''); } setQuantity(val);
       const num = parseFloat(val.replace(',', '.')); if (val !== '' && !isNaN(num) && num > 0) { setQuantityError(''); }
-    }} placeholder="1,0" 
+    }} placeholder="VD: 120,5" 
     className={
       `w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:outline-hidden transition-colors ${quantityError ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500'}`} />    
           
@@ -513,8 +513,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                 </div>
               </div>
 
-              {/* 4 Đơn vị tính nhanh: MET, KG, PCS, PAIR */}
-              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+              {/* 5 Đơn vị tính nhanh: PCS, PRS, MET, YARD, KG */}
+              <div className="grid grid-cols-5 gap-1.5 pt-0.5">
                 {ALLOWED_UNITS.map((u) => (
                   <button
                     key={u}
