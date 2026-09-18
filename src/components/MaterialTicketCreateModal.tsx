@@ -481,8 +481,31 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   >
                     Số lượng <span className="text-rose-500">*</span>
                   </label>
-           <input id="input-quantity" type="text" inputMode="decimal" pattern="[0-9]*[,]?[0-9]*" required value={quantity} onChange={(e) => { // Thay dấu chấm bằng dấu phẩy, chỉ giữ số và tối đa 1 dấu phẩy thập phân let val = e.target.value .replace(/\./g, ',') .replace(/[^0-9,]/g, ''); const commaParts = val.split(','); // Chỉ cho phép tối đa 1 dấu phẩy if (commaParts.length > 2) { val = commaParts[0] + ',' + commaParts.slice(1).join(''); } setQuantity(val); // Kiểm tra giá trị số > 0 const num = parseFloat(val.replace(',', '.')); if (val !== '' && !isNaN(num) && num > 0) { setQuantityError(''); } }} placeholder="1,0" className={`w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:outline-hidden transition-colors ${ quantityError ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500' }`} />
-                  {quantityError && (
+
+
+
+                  
+          <input
+  id="input-quantity"
+  type="text"
+  inputMode="decimal"
+
+  pattern="[0-9]*[,]?[0-9]*"
+  required value={quantity}
+  onChange={
+    (e) => {
+      let val = e.target.value.replace(/\./g, ',').replace(/[^0-9,]/g, '');
+      const commaParts = val.split(',');
+      if (commaParts.length > 2) { val = commaParts[0] + ',' + commaParts.slice(1).join(''); } setQuantity(val);
+      const num = parseFloat(val.replace(',', '.')); if (val !== '' && !isNaN(num) && num > 0) { setQuantityError(''); }
+    }} placeholder="1,0" 
+    className={
+      `w-full h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:outline-hidden transition-colors ${quantityError ? 'border-rose-500 focus:ring-rose-500' : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500'}`} />    
+          
+          
+          
+          
+          {quantityError && (
                     <p className="mt-1 text-[10px] text-rose-500 font-semibold leading-tight">
                       {quantityError}
                     </p>
