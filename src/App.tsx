@@ -727,9 +727,11 @@ export default function App() {
                 <div className="flex items-center justify-between pt-0.5">
                   <div className="flex items-center gap-2">
                     {/* Quantity Pill */}
-                    <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-mono">
-                      {formatQuantity(t.quantity)} {t.unit}
-                    </span>
+              
+<span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-mono">
+  {formatQuantity(t.quantity).replace(/\./g, ',')} {t.unit}
+</span>
+
 
                     {/* Location Badge */}
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
