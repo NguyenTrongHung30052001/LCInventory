@@ -15,6 +15,22 @@ const mesAgent = new http.Agent({
 // Fast DNS cache: cache resolved IP to avoid thread-pool dns.lookup latency
 let cachedHost = '113.161.240.40'; // Verified direct IP for mes.lienchau.vn
 
+// Helper to format ISO date in Vietnam timezone (+07:00)
+function toTzPlus7(dateInput?: string | number | Date): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const valid = isNaN(d.getTime()) ? new Date() : d;
+  const utc = valid.getTime() + valid.getTimezoneOffset() * 60000;
+  const vn = new Date(utc + 7 * 3600000);
+  const yyyy = vn.getFullYear();
+  const MM = String(vn.getMonth() + 1).padStart(2, '0');
+  const dd = String(vn.getDate()).padStart(2, '0');
+  const HH = String(vn.getHours()).padStart(2, '0');
+  const mm = String(vn.getMinutes()).padStart(2, '0');
+  const ss = String(vn.getSeconds()).padStart(2, '0');
+  const SSS = String(vn.getMilliseconds()).padStart(3, '0');
+  return `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}.${SSS}+07:00`;
+}
+
 // In-memory cache for GET inventory requests with fast invalidation on mutations
 interface CacheEntry {
   data: any;
@@ -252,7 +268,12 @@ async function startServer() {
   // http://mes.lienchau.vn:5092/api/FinishedGoodInventory
   const handleInventoryPush = async (req: express.Request, res: express.Response) => {
     try {
-      const payload = req.body;
+      const payload = { ...req.body };
+
+      // Ensure scannedAt is always explicitly in timezone +07:00 (Vietnam system time)
+      if (!payload.scannedAt || String(payload.scannedAt).endsWith('Z') || String(payload.scannedAt).endsWith('z')) {
+        payload.scannedAt = toTzPlus7(payload.scannedAt);
+      }
 
       // Invalidate cache immediately on new ticket
       invalidateInventoryCache();

@@ -1,4 +1,5 @@
 import { MaterialTicket } from '../types';
+import { formatToTimezonePlus7, parseMesDateToTimestamp } from '../utils/dateUtils';
 
 export interface MesInventoryPayload {
   warehouseCode: string;
@@ -48,7 +49,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     warehouseCode: ticket.warehouseCode?.trim() || 'FGW',
     location: ticket.warehouseLocation?.trim() || 'A1-02',
     scannedBy: ticket.scannedBy?.trim() || '105',
-    scannedAt: new Date(ticket.createdAt || Date.now()).toISOString(),
+    scannedAt: formatToTimezonePlus7(ticket.createdAt || Date.now()),
     qrCode:
       ticket.rawQr ||
       `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`,
@@ -158,11 +159,7 @@ export async function fetchInventoryByUser(
   const transformItems = (items: any[]): MaterialTicket[] => {
     return items.map((item) => ({
       id: String(item.id),
-      createdAt: item.createdAt
-        ? new Date(item.createdAt).getTime()
-        : item.scannedAt
-        ? new Date(item.scannedAt).getTime()
-        : Date.now(),
+      createdAt: parseMesDateToTimestamp(item.scannedAt || item.createdAt),
       rawQr: item.qrCode || '',
       materialCode: item.materialCode || '',
       color: item.color || '',
