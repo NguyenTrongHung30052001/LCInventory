@@ -533,7 +533,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-gray-50 to-emerald-50/40 text-slate-900 flex flex-col font-sans transition-colors">
       {/* Top App Bar from MES (Hidden per request) */}
       <div className="hidden">
         <Header
@@ -551,7 +551,8 @@ export default function App() {
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 space-y-5">
         
         {/* Hero Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="hidden items-center gap-4 mb-5">
             <div className="bg-emerald-700 text-white p-3.5 rounded-2xl shadow-sm">
               <FileText className="h-7 w-7" />
@@ -571,7 +572,7 @@ export default function App() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm mã VT, QR, vị trí, lô..."
-                className="w-full h-11 pl-10 pr-10 rounded-full border border-slate-200 bg-white text-sm text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                className="w-full h-12 pl-11 pr-10 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-[13px] text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all shadow-sm relative z-10"
               />
               {searchTerm && (
                 <button
@@ -593,7 +594,7 @@ export default function App() {
               <button 
                 type="button"
                 onClick={handleStartInventoryFlow}
-                className="flex-1 sm:flex-none h-11 px-6 rounded-xl bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 hover:bg-emerald-800 transition-colors shadow-sm"
+                className="flex-1 sm:flex-none h-12 px-7 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 relative z-10"
               >
                 <Camera className="h-4 w-4" />
                 Kiểm kê
@@ -603,12 +604,14 @@ export default function App() {
         </div>
 
         {/* Total Tickets Indicator instead of Tabs */}
-        <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-slate-700">
-            <FileText className="h-5 w-5 text-emerald-600" />
-            <span className="font-bold">Tổng số phiếu</span>
+        <div className="flex items-center justify-between bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex items-center gap-3 text-slate-700">
+            <div className="p-2.5 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-xl shadow-inner border border-white">
+              <FileText className="h-5 w-5 text-emerald-600" />
+            </div>
+            <span className="font-bold text-[15px]">Tổng số phiếu</span>
           </div>
-          <span className="bg-emerald-50 text-emerald-700 font-black px-3 py-1 rounded-full border border-emerald-200">
+          <span className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white font-black text-sm px-3.5 py-1.5 rounded-full shadow-md shadow-emerald-500/20">
             {filteredTickets.length}
           </span>
         </div>
@@ -650,15 +653,16 @@ export default function App() {
               <div
                 key={t.id}
                 onClick={() => setViewingTicket(t)}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 hover:border-emerald-500 cursor-pointer transition-colors group"
+                className="bg-white/90 backdrop-blur-xl rounded-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] hover:-translate-y-1 hover:border-emerald-200 cursor-pointer transition-all duration-300 group relative overflow-hidden"
               >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity"></div>
                 {/* Header row */}
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900 font-sans tracking-tight">
+                  <h3 className="text-lg font-black text-slate-800 font-sans tracking-tight relative z-10">
                     {t.materialCode || '(Chưa có mã VT)'}
                   </h3>
-                  <span className="inline-flex px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[13px] font-bold rounded-lg border border-emerald-200/80">
-                    {formatQuantity(t.quantity).replace(/\./g, ',')} {t.unit}
+                  <span className="inline-flex px-3 py-1 bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 text-[13px] font-black rounded-xl border border-emerald-200/50 shadow-sm relative z-10">
+                    {formatQuantity(t.quantity).replace(/\./g, ',')} <span className="text-[10px] uppercase ml-1 mt-0.5 opacity-80">{t.unit}</span>
                   </span>
                 </div>
                 
@@ -670,14 +674,14 @@ export default function App() {
                 </div>
                 
                 {/* Actions row */}
-                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                <div className="pt-3.5 border-t border-slate-100/80 flex justify-end relative z-10">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteTicket(t.id);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-sm font-bold transition-all duration-200"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 text-rose-600 hover:bg-gradient-to-r hover:from-rose-500 hover:to-red-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/30 active:scale-95 rounded-xl text-sm font-bold transition-all duration-300"
                   >
                     <Trash2 className="h-4 w-4" strokeWidth={2.5} />
                     Xóa
@@ -690,23 +694,23 @@ export default function App() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 p-3 shadow-sm mt-4">
+          <div className="flex items-center justify-between bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mt-4">
             <button
               type="button"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2.5 rounded-xl text-slate-600 hover:bg-slate-100/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="text-sm font-semibold text-slate-700">
+            <span className="text-sm font-bold text-slate-700 bg-slate-100/50 px-4 py-1.5 rounded-full">
               Trang {currentPage} / {totalPages}
             </span>
             <button
               type="button"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2.5 rounded-xl text-slate-600 hover:bg-slate-100/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
