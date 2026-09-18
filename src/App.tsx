@@ -622,6 +622,7 @@ export default function App() {
                 <span className="tracking-wide">Quét mã ngay</span>
               </button>
             </div>
+          ) : (
             filteredTickets.map((t) => (
               <div
                 key={t.id}
