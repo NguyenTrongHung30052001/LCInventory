@@ -405,31 +405,13 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                   />
                 </div>
 
-                {/* 5. Lô SX */}
+                {/* 5. Lệnh SX */}
                 <div>
-                  <label
-                    htmlFor="field-batch-number"
-                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5"
-                  >
-                    5. Lô sản xuất (Lot)
-                  </label>
-                  <input
-                    id="field-batch-number"
-                    type="text"
-                    value={batchNumber}
-                    onChange={(e) => setBatchNumber(e.target.value)}
-                    placeholder="VD: LOT20260917"
-                    className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  />
-                </div>
-
-                {/* 6. Lệnh SX */}
-                <div className="col-span-2">
                   <label
                     htmlFor="field-production-order"
                     className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5"
                   >
-                    6. Lệnh sản xuất (PO)
+                    5. Lệnh sản xuất (PO)
                   </label>
                   <input
                     id="field-production-order"
@@ -437,6 +419,24 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     value={productionOrder}
                     onChange={(e) => setProductionOrder(e.target.value)}
                     placeholder="VD: PO-8888"
+                    className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* 6. Lô SX */}
+                <div className="col-span-2">
+                  <label
+                    htmlFor="field-batch-number"
+                    className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5"
+                  >
+                    6. Lô sản xuất (Lot)
+                  </label>
+                  <input
+                    id="field-batch-number"
+                    type="text"
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    placeholder="VD: LOT20260917"
                     className="w-full h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>

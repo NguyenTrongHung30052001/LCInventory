@@ -1,7 +1,7 @@
 /**
  * Parser for Material QR Codes
  * Expected format:
- * Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lô sản xuất ^^ Lệnh sản xuất
+ * Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lệnh sản xuất ^^ Lô sản xuất
  * (Hoặc có thể dùng dấu phân tách là '-' hoặc '|')
  */
 
@@ -36,8 +36,8 @@ export const MATERIAL_QR_STANDARD_FIELDS = [
   { index: 2, key: 'color', label: 'Màu sắc', example: 'Đỏ đô / Xanh Navy' },
   { index: 3, key: 'size', label: 'Kích cỡ (Size)', example: 'L / XL / 1.4mm' },
   { index: 4, key: 'length', label: 'Chiều dài (Length)', example: '120m / 50m' },
-  { index: 5, key: 'batchNumber', label: 'Lô sản xuất (Lot)', example: 'LOT-2026-09' },
-  { index: 6, key: 'productionOrder', label: 'Lệnh sản xuất (PO)', example: 'LSX-88992' },
+  { index: 5, key: 'productionOrder', label: 'Lệnh sản xuất (PO)', example: 'LSX-88992' },
+  { index: 6, key: 'batchNumber', label: 'Lô sản xuất (Lot)', example: 'LOT-2026-09' },
 ];
 
 export function parseMaterialQr(input: string): ParsedMaterialQr {
@@ -98,8 +98,8 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
   const color = parts[1] || '';
   const size = parts[2] || '';
   const length = parts[3] || '';
-  const batchNumber = parts[4] || '';
-  const productionOrder = parts[5] || '';
+  const productionOrder = parts[4] || '';
+  const batchNumber = parts[5] || '';
 
   // Auto-detect unit if 7th part exists (e.g. ^^M, ^^kg, ^^pcs, ^^pair)
   let detectedUnit: 'MET' | 'KG' | 'PCS' | 'PAIR' | undefined;
@@ -126,7 +126,7 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
     productionOrder,
   });
 
-  const extractedValues = [materialCode, color, size, length, batchNumber, productionOrder];
+  const extractedValues = [materialCode, color, size, length, productionOrder, batchNumber];
 
   const fieldAnalysis: FieldAnalysis[] = MATERIAL_QR_STANDARD_FIELDS.map((field, idx) => {
     const val = extractedValues[idx] || '';
@@ -230,8 +230,8 @@ export function buildMaterialQrString(
     fields.color.trim(),
     fields.size.trim(),
     fields.length.trim(),
-    fields.batchNumber.trim(),
     fields.productionOrder.trim(),
+    fields.batchNumber.trim(),
   ]
     .filter(Boolean)
     .join(separator);
@@ -244,32 +244,32 @@ export const SAMPLE_MATERIAL_QRS = [
   {
     label: 'Mẫu 1 (Dấu ^^)',
     delimiter: '^^' as const,
-    raw: 'VT-COTTON-01 ^^ Đỏ đô ^^ L ^^ 120m ^^ LOT-2026-09 ^^ LSX-88992',
+    raw: 'VT-COTTON-01 ^^ Đỏ đô ^^ L ^^ 120m ^^ LSX-88992 ^^ LOT-2026-09',
     description: 'Vải Cotton đỏ đô, size L, dài 120m, Lô 2026-09',
   },
   {
     label: 'Mẫu 2 (Dấu -)',
     delimiter: '-' as const,
-    raw: 'VT-POLY-102 - Xanh Navy - XL - 50m - L2603 - SX-1024',
+    raw: 'VT-POLY-102 - Xanh Navy - XL - 50m - SX-1024 - L2603',
     description: 'Sợi Polyester xanh Navy, size XL, dài 50m',
   },
   {
     label: 'Mẫu 3 (Dấu ^^ Da may)',
     delimiter: '^^' as const,
-    raw: 'DA-PU-PREMIUM ^^ Nâu da bò ^^ 1.4mm ^^ 85m ^^ LOT-PU-441 ^^ LSX-BAG-99',
+    raw: 'DA-PU-PREMIUM ^^ Nâu da bò ^^ 1.4mm ^^ 85m ^^ LSX-BAG-99 ^^ LOT-PU-441',
     description: 'Da PU nâu, độ dày 1.4mm, dài 85m',
   },
   {
     label: 'Mẫu 4 (Dấu - Dệt kim)',
     delimiter: '-' as const,
-    raw: 'CHI-MAY-SPUN - Trắng tinh - 40/2 - 5000m - LOT-CHI-26 - LSX-MAY-301',
+    raw: 'CHI-MAY-SPUN - Trắng tinh - 40/2 - 5000m - LSX-MAY-301 - LOT-CHI-26',
     description: 'Chỉ may Spun trắng 40/2 dài 5000m',
   },
   {
     label: '⚠️ Mẫu lỗi: Thiếu trường',
     delimiter: '^^' as const,
     raw: 'VT-COTTON-01 ^^ Đỏ đô ^^ L',
-    description: 'Mã lỗi chỉ có 3/6 trường (thiếu Length, Lô SX, Lệnh SX)',
+    description: 'Mã lỗi chỉ có 3/6 trường (thiếu Length, Lệnh SX, Lô SX)',
   },
   {
     label: '⚠️ Mẫu lỗi: Sai phân tách',

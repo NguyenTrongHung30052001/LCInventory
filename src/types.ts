@@ -41,7 +41,7 @@ export interface MaterialTicket {
   // Raw QR string
   rawQr: string;
 
-  // 6 fields extracted from QR (Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lô sản xuất ^^ Lệnh sản xuất)
+  // 6 fields extracted from QR (Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lệnh sản xuất ^^ Lô sản xuất)
   materialCode: string;    // Mã vật tư
   color: string;           // Màu
   size: string;            // Size

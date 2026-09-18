@@ -122,15 +122,15 @@ export const MaterialTicketDetailModal: React.FC<MaterialTicketDetailModalProps>
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Lô sản xuất (Lot)</span>
-                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                    {ticket.batchNumber || '—'}
-                  </span>
-                </div>
-                <div className="col-span-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <span className="text-[10px] text-slate-400 block">Lệnh sản xuất (PO)</span>
                   <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                     {ticket.productionOrder || '—'}
+                  </span>
+                </div>
+                <div className="col-span-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Lô sản xuất (Lot)</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                    {ticket.batchNumber || '—'}
                   </span>
                 </div>
               </div>

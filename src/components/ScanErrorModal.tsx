@@ -169,7 +169,7 @@ export const ScanErrorModal: React.FC<ScanErrorModalProps> = ({
                 Cấu trúc QR vật tư chuẩn:
               </span>
               <p className="font-mono text-[10px] text-amber-800 dark:text-amber-300 bg-white/70 dark:bg-black/30 p-1.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40 break-all leading-relaxed">
-                Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lô sản xuất ^^ Lệnh sản xuất
+                Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lệnh sản xuất ^^ Lô sản xuất
               </p>
               <p className="text-[10px] text-amber-700 dark:text-amber-400">
                 (Hệ thống chấp nhận dấu phân tách là <strong>^^</strong> hoặc <strong>-</strong>)
