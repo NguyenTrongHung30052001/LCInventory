@@ -502,7 +502,7 @@ export default function App() {
     return acc;
   }, {} as Record<string, MaterialTicket[]>);
 
-  const groupEntries = Object.entries(groupedTickets);
+  const groupEntries = Object.entries(groupedTickets) as [string, MaterialTicket[]][];
   const totalPages = Math.ceil(groupEntries.length / ITEMS_PER_PAGE);
   const paginatedGroups = groupEntries.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
