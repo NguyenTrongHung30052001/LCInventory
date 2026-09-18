@@ -146,23 +146,30 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               <span className="text-rose-500">*</span>
             </label>
             <input
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9]*[.]?[0-9]*"
-              required
-              value={quantity}
-              onChange={(e) => {
-                let val = e.target.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
-                const dotParts = val.split('.');
-                if (dotParts.length > 2) {
-                  val = dotParts[0] + '.' + dotParts.slice(1).join('');
-                }
-                setQuantity(val);
-                if (errorMsg) setErrorMsg(null);
-              }}
-              placeholder="VD: 120.5"
-              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-            />
+  type="text"
+  inputMode="decimal"
+  pattern="[0-9]*[,]?[0-9]*"
+  required
+  value={quantity}
+  onChange={(e) => {
+    let val = e.target.value
+      .replace(/\./g, ',')       // Nếu nhập dấu . thì đổi thành ,
+      .replace(/[^0-9,]/g, '');  // Chỉ cho phép số và dấu ,
+
+    const commaParts = val.split(',');
+
+    // Chỉ cho phép 1 dấu ,
+    if (commaParts.length > 2) {
+      val = commaParts[0] + ',' + commaParts.slice(1).join('');
+    }
+
+    setQuantity(val);
+
+    if (errorMsg) setErrorMsg(null);
+  }}
+  placeholder="VD: 120,5"
+  className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+/>
           </div>
 
           {/* Editable Field 2: Đơn vị tính */}
