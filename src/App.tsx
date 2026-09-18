@@ -495,8 +495,16 @@ export default function App() {
     );
   });
 
-  const totalPages = Math.ceil(filteredTickets.length / ITEMS_PER_PAGE);
-  const paginatedTickets = filteredTickets.slice(
+  const groupedTickets = filteredTickets.reduce((acc, t) => {
+    const loc = t.warehouseLocation || 'Chưa phân bổ';
+    if (!acc[loc]) acc[loc] = [];
+    acc[loc].push(t);
+    return acc;
+  }, {} as Record<string, MaterialTicket[]>);
+
+  const groupEntries = Object.entries(groupedTickets);
+  const totalPages = Math.ceil(groupEntries.length / ITEMS_PER_PAGE);
+  const paginatedGroups = groupEntries.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -659,58 +667,74 @@ export default function App() {
               </p>
             </div>
           ) : (
-            paginatedTickets.map((t) => (
-              <div
-                key={t.id}
-                onClick={() => setViewingTicket(t)}
-                className="bg-white/90 backdrop-blur-xl rounded-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] hover:-translate-y-1 hover:border-emerald-200 cursor-pointer transition-all duration-300 group relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity"></div>
-                {/* Header row */}
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-black text-slate-800 font-sans tracking-tight relative z-10">
-                    {t.materialCode || '(Chưa có mã VT)'}
+            paginatedGroups.map(([location, locationTickets]) => (
+              <div key={location} className="mb-6 last:mb-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 bg-emerald-100 rounded-xl shadow-inner border border-white">
+                    <MapPin className="h-5 w-5 text-emerald-700" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 flex-1">
+                    {location}
                   </h3>
-                  <span className="inline-flex px-3 py-1 bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 text-[13px] font-black rounded-xl border border-emerald-200/50 shadow-sm relative z-10">
-                    {formatQuantity(t.quantity).replace(/\./g, ',')} <span className="text-[10px] uppercase ml-1 mt-0.5 opacity-80">{t.unit}</span>
+                  <span className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-lg text-sm border border-emerald-200/50 shadow-sm">
+                    {locationTickets.length} phiếu
                   </span>
                 </div>
                 
-                {/* Detail rows */}
-                <div className="space-y-2.5 text-[13px] text-slate-500 mb-5 relative z-10">
-                  <div className="flex items-center">
-                    <Building2 className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                    <span>Kho:</span> <span className="font-bold text-slate-800 ml-1">{getWarehouseName(t.warehouseCode || warehouseCode || 'FGW')}</span>
-                    <span className="text-slate-300 mx-2.5">|</span>
-                    <MapPin className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                    <span>Vị trí:</span> <span className="font-bold text-slate-800 ml-1">{t.warehouseLocation || 'A1-02'}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Package className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                    <span>Lô SX:</span> <span className="text-slate-700 ml-1">{t.batchNumber || '—'}</span>
-                    <span className="text-slate-300 mx-2.5">|</span>
-                    <Hash className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                    <span>Lệnh SX:</span> <span className="text-slate-700 ml-1">{t.productionOrder || '—'}</span>
-                  </div>
-                  <div className="flex items-center text-slate-400 pt-0.5">
-                    <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-                    Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}
-                  </div>
-                </div>
-                
-                {/* Actions row */}
-                <div className="pt-3.5 border-t border-slate-100/80 flex justify-end relative z-10">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTicket(t.id);
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 text-rose-600 hover:bg-gradient-to-r hover:from-rose-500 hover:to-red-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/30 active:scale-95 rounded-xl text-sm font-bold transition-all duration-300"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2.5} />
-                    Xóa
-                  </button>
+                <div className="space-y-4 pl-3 sm:pl-5 border-l-2 border-emerald-100/60 ml-4 relative">
+                  {locationTickets.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => setViewingTicket(t)}
+                      className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] p-4 hover:shadow-[0_4px_20px_rgb(16,185,129,0.12)] hover:-translate-y-0.5 hover:border-emerald-200 cursor-pointer transition-all duration-300 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-100/30 to-transparent rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity"></div>
+                      
+                      {/* Header row */}
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-base font-black text-slate-800 font-sans tracking-tight relative z-10">
+                          {t.materialCode || '(Chưa có mã VT)'}
+                        </h3>
+                        <span className="inline-flex px-2.5 py-1 bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 text-xs font-black rounded-lg border border-emerald-200/50 shadow-sm relative z-10">
+                          {formatQuantity(t.quantity).replace(/\./g, ',')} <span className="text-[10px] uppercase ml-1 mt-0.5 opacity-80">{t.unit}</span>
+                        </span>
+                      </div>
+                      
+                      {/* Detail rows */}
+                      <div className="space-y-1.5 text-xs text-slate-500 mb-3 relative z-10">
+                        <div className="flex items-center">
+                          <Building2 className="h-3 w-3 text-slate-400 mr-1.5" />
+                          <span>Kho:</span> <span className="font-bold text-slate-800 ml-1">{getWarehouseName(t.warehouseCode || warehouseCode || 'FGW')}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Package className="h-3 w-3 text-slate-400 mr-1.5" />
+                          <span>Lô SX:</span> <span className="text-slate-700 ml-1">{t.batchNumber || '—'}</span>
+                          <span className="text-slate-300 mx-2">|</span>
+                          <Hash className="h-3 w-3 text-slate-400 mr-1.5" />
+                          <span>Lệnh SX:</span> <span className="text-slate-700 ml-1">{t.productionOrder || '—'}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Actions row */}
+                      <div className="pt-2.5 border-t border-slate-100/80 flex justify-between items-center relative z-10">
+                        <div className="flex items-center text-slate-400 text-[11px]">
+                          <CalendarClock className="h-3 w-3 mr-1" />
+                          {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTicket(t.id);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-gradient-to-r hover:from-rose-500 hover:to-red-500 hover:text-white hover:shadow-md hover:shadow-rose-500/30 active:scale-95 rounded-lg text-xs font-bold transition-all duration-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))
