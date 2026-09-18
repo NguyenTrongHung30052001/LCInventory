@@ -105,11 +105,11 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
 
   // When scannedLocationQr updates (from warehouse location scan)
   useEffect(() => {
-    if (scannedLocationQr) {
+    if (isOpen && scannedLocationQr) {
       setWarehouseLocation(scannedLocationQr.trim());
       onClearScannedLocationQr();
     }
-  }, [scannedLocationQr]);
+  }, [isOpen, scannedLocationQr]);
 
   const applyQrString = (val: string) => {
     setRawQr(val);
