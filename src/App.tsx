@@ -19,6 +19,9 @@ import {
   Edit3,
   RefreshCw,
   Loader2,
+  Filter,
+  Download,
+  User,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
@@ -514,8 +517,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-emerald-50/40 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20 dark:text-slate-100 flex flex-col font-sans transition-colors pb-8 selection:bg-emerald-500/30">
-      {/* App Header with Liên Châu Logo and Version indicator */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors">
+      {/* Top App Bar from MES */}
       <Header
         ticketCount={tickets.length}
         beepEnabled={beepEnabled}
@@ -526,296 +529,155 @@ export default function App() {
         onOpenVersionModal={() => setIsVersionModalOpen(true)}
       />
 
-      {/* Main Mobile Screen */}
-      <main className="flex-1 max-w-md sm:max-w-xl w-full mx-auto px-4 py-4 space-y-4">
-        {/* SEARCH INPUT */}
-        <div className="space-y-3">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-emerald-400/20 rounded-full blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-            <input
-              id="input-mobile-search"
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm mã VT, màu, size, lô, vị trí, ghi chú..."
-              className="w-full h-12 pl-11 pr-10 rounded-full glass-panel text-[13px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50 transition-all relative z-10"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+      {/* Main Content Screen */}
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 space-y-5">
+        
+        {/* Hero Section */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="bg-emerald-700 text-white p-3.5 rounded-2xl shadow-sm">
+              <FileText className="h-7 w-7" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Kiểm kê kho Thành phẩm</h2>
+              <p className="text-sm text-slate-500 mt-0.5">Quản lý và ghi nhận thông tin kiểm kê vật tư kho thành phẩm FGW</p>
+            </div>
           </div>
-
-          {/* Clean Action Bar: Ticket count & Refresh button (không hiển thị mã user và mã kho trên UI) */}
-          <div className="flex items-center justify-between px-2 text-xs">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wide">
-              Danh sách kiểm kê ({tickets.length} phiếu)
-            </span>
-
-            <button
-              type="button"
-              onClick={() => loadInventory(scannedByUserId)}
-              disabled={isLoadingList}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:border-emerald-200/60 dark:hover:border-emerald-800/60 transition-all disabled:opacity-50"
-              title="Tải lại danh sách từ máy chủ MES"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${isLoadingList ? 'animate-spin text-emerald-600' : ''}`}
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                id="input-mobile-search"
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm mã VT, QR, vị trí, lô..."
+                className="w-full h-11 pl-10 pr-10 rounded-full border border-slate-200 bg-white text-sm text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
               />
-              <span>Làm mới</span>
-            </button>
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button type="button" className="flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 flex items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Bộ lọc">
+                <Filter className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 flex items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Tải xuống CSV">
+                <Download className="h-4 w-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={handleStartInventoryFlow}
+                className="flex-1 sm:flex-none h-11 px-6 rounded-xl bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 hover:bg-emerald-800 transition-colors shadow-sm"
+              >
+                <Camera className="h-4 w-4" />
+                Kiểm kê
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
+          <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            <FileText className="h-4 w-4" />
+            Toàn bộ kiểm kê <span className="bg-slate-100 text-slate-600 text-[11px] px-2 py-0.5 rounded-full font-bold">4</span>
+          </button>
+          <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-bold bg-emerald-700 text-white shadow-sm transition-colors">
+            <User className="h-4 w-4" />
+            Phiếu tôi quét <span className="bg-white text-emerald-700 text-[11px] font-black px-2 py-0.5 rounded-full">{tickets.length}</span>
+          </button>
         </div>
 
         {/* API Error Notification */}
         {listError && (
-          <div className="p-3.5 rounded-2xl glass-panel !bg-rose-50/80 dark:!bg-rose-950/40 !border-rose-200 dark:!border-rose-900 text-rose-800 dark:text-rose-200 text-[13px] flex items-center justify-between gap-3 shadow-rose-900/5">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[13px] flex items-center justify-between gap-3 shadow-sm">
             <span className="font-medium">{listError}</span>
             <button
               type="button"
               onClick={() => loadInventory(scannedByUserId)}
-              className="text-xs font-bold underline shrink-0 hover:text-rose-950 dark:hover:text-rose-100 px-2 py-1"
+              className="text-xs font-bold underline shrink-0 hover:text-rose-950 px-2 py-1"
             >
               Thử lại
             </button>
           </div>
         )}
 
-        {/* TICKET CARDS LIST (MOBILE OPTIMIZED) - CHỈ LẤY DANH SÁCH TỪ API */}
-        <div className="space-y-3 pt-1">
+        {/* Cards */}
+        <div className="space-y-4">
           {isLoadingList && tickets.length === 0 ? (
-            <div className="p-10 rounded-3xl glass-panel text-center flex flex-col items-center justify-center animate-pulse">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mb-3" />
+            <div className="p-10 bg-white rounded-2xl border border-slate-200 text-center flex flex-col items-center justify-center animate-pulse">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-700 mb-3" />
               <p className="text-sm font-medium text-slate-500">
                 Đang tải dữ liệu từ MES...
               </p>
             </div>
           ) : filteredTickets.length === 0 ? (
-            /* Empty State with Lien Chau Branding */
-            <div className="p-10 rounded-3xl glass-panel text-center flex flex-col items-center justify-center">
-              <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full border border-emerald-100 dark:border-emerald-800/50">
-                <LienChauLogo size="lg" />
-              </div>
-              <p className="text-base font-black text-slate-800 dark:text-slate-200 mb-1">
-                Chưa có phiếu kiểm kê
+            <div className="p-10 bg-white rounded-2xl border border-slate-200 text-center flex flex-col items-center justify-center">
+              <p className="text-base font-bold text-slate-800 mb-2">
+                Chưa có dữ liệu kiểm kê
               </p>
-              <p className="text-xs text-slate-500 mb-6 max-w-[250px] leading-relaxed">
-                Đưa camera quét mã QR trên cuộn vải hoặc vật tư để tạo và gửi dữ liệu vào MES.
+              <p className="text-sm text-slate-500 mb-6 max-w-xs">
+                Bấm nút Kiểm kê phía trên để bắt đầu quét mã.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setScannedMaterialQr(null);
-                  setScannedLocationQr(null);
-                  setIsCreateModalOpen(true);
-                  handleOpenMaterialScanner();
-                }}
-                className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all duration-200"
-              >
-                <Camera className="h-5 w-5" />
-                <span className="tracking-wide">Quét mã ngay</span>
-              </button>
             </div>
           ) : (
             filteredTickets.map((t) => (
               <div
                 key={t.id}
                 onClick={() => setViewingTicket(t)}
-                className="p-4 rounded-3xl glass-panel hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] transition-all duration-300 cursor-pointer space-y-3.5 relative overflow-hidden group"
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 hover:border-emerald-500 cursor-pointer transition-colors group"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-transparent dark:from-emerald-900/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity"></div>
-                
-                {/* Card Top: Item ID, MES Status & Time */}
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 font-mono font-bold text-[11px] shadow-sm">
-                      #{t.id}
-                    </span>
-                    {getMesBadge(t.mesSyncStatus)}
-                  </div>
-                  <span className="text-[10px] text-slate-500/80 dark:text-slate-400 font-mono font-medium tracking-wide">
-                    {new Date(t.createdAt).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}{' '}
-                    - {new Date(t.createdAt).toLocaleDateString('vi-VN')}
-                  </span>
-                </div>
-
-                {/* Material Code Title */}
-                <div className="relative z-10 pt-1">
-                  <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 block mb-1">
-                    Mã vật tư:
-                  </span>
-                  <h3 className="text-[17px] font-black font-mono text-emerald-700 dark:text-emerald-400 truncate tracking-tight">
+                {/* Header row */}
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-900 font-sans tracking-tight">
                     {t.materialCode || '(Chưa có mã VT)'}
                   </h3>
+                  <span className="inline-flex px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[13px] font-bold rounded-lg border border-emerald-200/80">
+                    {formatQuantity(t.quantity).replace(/\./g, ',')} {t.unit}
+                  </span>
                 </div>
-
-                {/* 6 Fields Compact Summary Grid */}
-                <div className="grid grid-cols-3 gap-2.5 text-[11px] p-3 rounded-[1.25rem] bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 relative z-10 shadow-inner">
-                  <div>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
-                      Màu:
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
-                      {t.color || '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
-                      Size:
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
-                      {t.size || '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
-                      Length:
-                    </span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block">
-                      {t.length || '—'}
-                    </span>
-                  </div>
-                  <div className="col-span-1 pt-0.5">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
-                      Lô SX:
-                    </span>
-                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300 truncate block">
-                      {t.batchNumber || '—'}
-                    </span>
-                  </div>
-                  <div className="col-span-2 pt-0.5">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">
-                      Lệnh SX:
-                    </span>
-                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300 truncate block">
-                      {t.productionOrder || '—'}
-                    </span>
-                  </div>
+                
+                {/* Detail rows */}
+                <div className="space-y-1.5 text-[13px] text-slate-500 mb-5">
+                  <p>Kho: <span className="font-bold text-slate-800">{t.warehouseCode || warehouseCode || 'FGW'}</span> <span className="text-slate-300 mx-1">|</span> Vị trí: <span className="font-bold text-slate-800">{t.warehouseLocation || 'A1-02'}</span></p>
+                  <p>Lô SX: {t.batchNumber || '—'} <span className="text-slate-300 mx-1">|</span> Lệnh SX: {t.productionOrder || '—'}</p>
+                  <p>Người quét: <span className="font-bold text-slate-800">{t.scannedBy || scannedByUserId || '105'}</span></p>
+                  <p>Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}</p>
                 </div>
-
-                {/* Mô tả vật tư - Luôn hiển thị ra ngoài */}
-                <div className="text-[12px] text-slate-700 dark:text-slate-300 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-[1.25rem] border border-emerald-100/50 dark:border-emerald-900/30 flex items-start gap-2 relative z-10">
-                  <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 opacity-80" />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600/70 dark:text-emerald-500/70 block mb-0.5">
-                      Mô tả:
-                    </span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-snug">
-                      {t.notes?.trim() ||
-                        [
-                          t.materialCode,
-                          t.color && `Màu: ${t.color}`,
-                          t.size && `Size: ${t.size}`,
-                          t.length && t.length !== '0' && `Dài: ${t.length}`,
-                          t.batchNumber && t.batchNumber !== '_' && `Lô: ${t.batchNumber}`,
-                          t.productionOrder && `LSX: ${t.productionOrder}`,
-                        ]
-                          .filter(Boolean)
-                          .join(' - ') ||
-                        'Chưa có mô tả'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Card Bottom: Quantity, Location & Quick actions */}
-                <div className="flex items-center justify-between pt-1 relative z-10">
-                  <div className="flex items-center gap-2.5">
-                    {/* Quantity Pill */}
-                    <span className="text-[13px] font-black px-3 py-1 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 dark:from-emerald-900/60 dark:to-teal-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50 font-mono shadow-sm">
-                      {formatQuantity(t.quantity).replace(/\./g, ',')} <span className="text-[10px] font-sans font-bold opacity-80 uppercase ml-0.5">{t.unit}</span>
-                    </span>
-
-                    {/* Location Badge */}
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                      <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="truncate max-w-[110px]">
-                        {t.warehouseLocation || 'A1-02'}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Actions: Edit, Delete, Copy, Detail */}
-                  <div
-                    className="flex items-center gap-1 bg-white/60 dark:bg-slate-900/60 rounded-2xl p-1 border border-slate-100 dark:border-slate-800/60 shadow-sm backdrop-blur-sm"
-                    onClick={(e) => e.stopPropagation()}
+                
+                {/* Actions row */}
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTicket(t.id);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-sm font-bold transition-colors"
                   >
-                    {/* Nút Sửa: Chỉ sửa đơn vị tính, số lượng, ghi chú */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingTicket(t);
-                      }}
-                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/50 dark:hover:text-emerald-300 transition-all"
-                      title="Chỉnh sửa (ĐVT, số lượng, ghi chú)"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-
-                    {/* Nút Xóa: Gọi API DELETE /api/FinishedGoodInventory/{id} */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTicket(t.id);
-                      }}
-                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/50 dark:hover:text-rose-400 transition-all"
-                      title="Xóa dòng kiểm kê trên MES"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopyText(t.rawQr || t.materialCode);
-                      }}
-                      className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800/80 transition-all"
-                      title="Sao chép"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setViewingTicket(t)}
-                      className="p-2 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/50 transition-all"
-                      title="Chi tiết"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
+                    <Trash2 className="h-4 w-4" strokeWidth={2.5} />
+                    Xóa
+                  </button>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* 5. PHẦN HIỂN THỊ PHIÊN BẢN & THỜI GIAN CẬP NHẬT (BOTTOM FOOTER) */}
-        <div className="pt-3 pb-1 text-center">
-          <button
-            type="button"
-            onClick={() => setIsVersionModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 transition-colors shadow-2xs group"
-          >
-            <span className="font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
-              {APP_VERSION.version}
-            </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span>Cập nhật: {APP_VERSION.updatedAt}</span>
-          </button>
-        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-4 py-6 text-center text-sm text-slate-500 bg-slate-100 border-t border-slate-200">
+        © 2026 Dệt Liên Châu. Được phát triển & bảo trì bởi IT Liên Châu.
+      </footer>
 
       {/* MODAL 0: LOCATION STEP MODAL (BƯỚC 1: ĐIỀN HOẶC QUÉT VỊ TRÍ) */}
       <LocationStepModal
