@@ -21,9 +21,12 @@ import {
   Loader2,
   Filter,
   Download,
-  User,
   ChevronLeft,
   ChevronRight,
+  Building2,
+  Package,
+  Hash,
+  CalendarClock,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { MaterialTicketCreateModal } from './components/MaterialTicketCreateModal';
@@ -667,10 +670,25 @@ export default function App() {
                 </div>
                 
                 {/* Detail rows */}
-                <div className="space-y-2 text-[13px] text-slate-500 mb-5">
-                  <p>Kho: <span className="font-bold text-slate-800">{t.warehouseCode || warehouseCode || 'FGW'}</span> <span className="text-slate-300 mx-2">|</span> Vị trí: <span className="font-bold text-slate-800">{t.warehouseLocation || 'A1-02'}</span></p>
-                  <p>Lô SX: <span className="text-slate-700">{t.batchNumber || '—'}</span> <span className="text-slate-300 mx-2">|</span> Lệnh SX: <span className="text-slate-700">{t.productionOrder || '—'}</span></p>
-                  <p className="text-slate-400">Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}</p>
+                <div className="space-y-2.5 text-[13px] text-slate-500 mb-5 relative z-10">
+                  <div className="flex items-center">
+                    <Building2 className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                    <span>Kho:</span> <span className="font-bold text-slate-800 ml-1">{t.warehouseCode || warehouseCode || 'FGW'}</span>
+                    <span className="text-slate-300 mx-2.5">|</span>
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                    <span>Vị trí:</span> <span className="font-bold text-slate-800 ml-1">{t.warehouseLocation || 'A1-02'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Package className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                    <span>Lô SX:</span> <span className="text-slate-700 ml-1">{t.batchNumber || '—'}</span>
+                    <span className="text-slate-300 mx-2.5">|</span>
+                    <Hash className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                    <span>Lệnh SX:</span> <span className="text-slate-700 ml-1">{t.productionOrder || '—'}</span>
+                  </div>
+                  <div className="flex items-center text-slate-400 pt-0.5">
+                    <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+                    Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                  </div>
                 </div>
                 
                 {/* Actions row */}
