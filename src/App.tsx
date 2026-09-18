@@ -663,11 +663,10 @@ export default function App() {
                 </div>
                 
                 {/* Detail rows */}
-                <div className="space-y-1.5 text-[13px] text-slate-500 mb-5">
-                  <p>Kho: <span className="font-bold text-slate-800">{t.warehouseCode || warehouseCode || 'FGW'}</span> <span className="text-slate-300 mx-1">|</span> Vị trí: <span className="font-bold text-slate-800">{t.warehouseLocation || 'A1-02'}</span></p>
-                  <p>Lô SX: {t.batchNumber || '—'} <span className="text-slate-300 mx-1">|</span> Lệnh SX: {t.productionOrder || '—'}</p>
-                  <p>Người quét: <span className="font-bold text-slate-800">{t.scannedBy || scannedByUserId || '105'}</span></p>
-                  <p>Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}</p>
+                <div className="space-y-2 text-[13px] text-slate-500 mb-5">
+                  <p>Kho: <span className="font-bold text-slate-800">{t.warehouseCode || warehouseCode || 'FGW'}</span> <span className="text-slate-300 mx-2">|</span> Vị trí: <span className="font-bold text-slate-800">{t.warehouseLocation || 'A1-02'}</span></p>
+                  <p>Lô SX: <span className="text-slate-700">{t.batchNumber || '—'}</span> <span className="text-slate-300 mx-2">|</span> Lệnh SX: <span className="text-slate-700">{t.productionOrder || '—'}</span></p>
+                  <p className="text-slate-400">Thời gian: {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} {new Date(t.createdAt).toLocaleDateString('vi-VN')}</p>
                 </div>
                 
                 {/* Actions row */}
@@ -678,7 +677,7 @@ export default function App() {
                       e.stopPropagation();
                       handleDeleteTicket(t.id);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-sm font-bold transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-sm font-bold transition-all duration-200"
                   >
                     <Trash2 className="h-4 w-4" strokeWidth={2.5} />
                     Xóa
