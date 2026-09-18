@@ -518,23 +518,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors">
-      {/* Top App Bar from MES */}
-      <Header
-        ticketCount={tickets.length}
-        beepEnabled={beepEnabled}
-        onToggleBeep={() => setBeepEnabled((prev) => !prev)}
-        onOpenCreateTicket={handleStartInventoryFlow}
-        onOpenQuickScan={handleStartInventoryFlow}
-        onExportCSV={handleExportCSV}
-        onOpenVersionModal={() => setIsVersionModalOpen(true)}
-      />
+      {/* Top App Bar from MES (Hidden per request) */}
+      <div className="hidden">
+        <Header
+          ticketCount={tickets.length}
+          beepEnabled={beepEnabled}
+          onToggleBeep={() => setBeepEnabled((prev) => !prev)}
+          onOpenCreateTicket={handleStartInventoryFlow}
+          onOpenQuickScan={handleStartInventoryFlow}
+          onExportCSV={handleExportCSV}
+          onOpenVersionModal={() => setIsVersionModalOpen(true)}
+        />
+      </div>
 
       {/* Main Content Screen */}
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 space-y-5">
         
         {/* Hero Section */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center gap-4 mb-5">
+          <div className="hidden items-center gap-4 mb-5">
             <div className="bg-emerald-700 text-white p-3.5 rounded-2xl shadow-sm">
               <FileText className="h-7 w-7" />
             </div>
@@ -566,10 +568,10 @@ export default function App() {
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button type="button" className="flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 flex items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Bộ lọc">
+              <button type="button" className="hidden flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Bộ lọc">
                 <Filter className="h-4 w-4" />
               </button>
-              <button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 flex items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Tải xuống CSV">
+              <button type="button" onClick={handleExportCSV} className="hidden flex-1 sm:flex-none h-11 px-4 rounded-xl border border-slate-200 text-emerald-700 items-center justify-center bg-white hover:bg-slate-50 transition-colors" title="Tải xuống CSV">
                 <Download className="h-4 w-4" />
               </button>
               <button 
@@ -586,7 +588,7 @@ export default function App() {
 
         {/* Tabs */}
         <div className="flex items-center bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
-          <button type="button" className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+          <button type="button" className="hidden flex-1 items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
             <FileText className="h-4 w-4" />
             Toàn bộ kiểm kê <span className="bg-slate-100 text-slate-600 text-[11px] px-2 py-0.5 rounded-full font-bold">4</span>
           </button>
