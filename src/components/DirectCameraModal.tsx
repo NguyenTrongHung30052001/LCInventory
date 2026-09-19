@@ -54,6 +54,8 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   const [torchOn, setTorchOn] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
   const [showSamplePicker, setShowSamplePicker] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<1 | 2 | 4>(1);
+  const zoomRef = useRef<1 | 2 | 4>(1);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -223,7 +225,15 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
 
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (ctx) {
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              // Crop the center region based on zoom for accurate QR decoding
+              const z = zoomRef.current;
+              const sw = video.videoWidth / z;
+              const sh = video.videoHeight / z;
+              const sx = (video.videoWidth - sw) / 2;
+              const sy = (video.videoHeight - sh) / 2;
+              canvas.width = sw;
+              canvas.height = sh;
+              ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
               const result = await decodeCanvas(canvas);
 
               if (result && result.data && result.data.trim() && !hasTriggeredRef.current) {
@@ -262,6 +272,26 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
       }
     };
   }, [isOpen, isCameraActive, scanLocked, onScanSuccess, onClose, stopCamera]);
+
+  // Zoom control — try hardware zoom first, fall back to CSS transform
+  const handleZoom = async (level: 1 | 2 | 4) => {
+    setZoomLevel(level);
+    zoomRef.current = level;
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      const capabilities = track.getCapabilities?.() as any;
+      if (capabilities && 'zoom' in capabilities) {
+        const minZ = capabilities.zoom?.min ?? 1;
+        const maxZ = capabilities.zoom?.max ?? 8;
+        const target = Math.min(Math.max(level, minZ), maxZ);
+        try {
+          await track.applyConstraints({ advanced: [{ zoom: target } as any] });
+          return; // hardware zoom applied — no CSS needed
+        } catch {}
+      }
+    }
+    // CSS transform fallback — visual zoom only (canvas crop handles decoding)
+  };
 
   // Torch toggle
   const handleToggleTorch = async () => {
@@ -422,7 +452,9 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 isCameraActive ? 'opacity-100' : 'opacity-0'
               }`}
               style={{
-                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                transform: `${facingMode === 'user' ? 'scaleX(-1) ' : ''}scale(${zoomLevel})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.2s ease',
               }}
             />
 
@@ -561,6 +593,26 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Zoom Controls */}
+            {isCameraActive && !scanLocked && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1.5 border border-white/10">
+                {([1, 2, 4] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => handleZoom(level)}
+                    className={`w-9 h-9 rounded-full text-xs font-bold transition-all duration-200 ${
+                      zoomLevel === level
+                        ? 'bg-amber-400 text-slate-900 shadow-[0_0_10px_rgba(251,191,36,0.7)] scale-110'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {level}×
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Quick in-view Controls (Torch & Flip) */}
             <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
