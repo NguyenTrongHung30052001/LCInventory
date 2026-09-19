@@ -191,7 +191,6 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     };
   }, [isOpen, startCamera, stopCamera]);
 
-  }, [isOpen, startCamera, stopCamera]);
 
   // Zoom control — try hardware zoom first, fall back to CSS transform only
   const handleZoom = async (level: 1 | 2 | 4) => {
