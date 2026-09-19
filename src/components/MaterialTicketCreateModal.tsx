@@ -123,7 +123,8 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
     if (parsed.batchNumber) setBatchNumber(parsed.batchNumber);
     if (parsed.productionOrder) setProductionOrder(parsed.productionOrder);
     if (parsed.detectedUnit) setUnit(parsed.detectedUnit);
-    if (parsed.description) setNotes(parsed.description);
+    // Không tự động điền ghi chú nữa
+    setNotes('');
   };
 
   const handleClearQr = () => {
@@ -172,6 +173,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
       await onSaveTicket(newTicket, submitAction);
       if (submitAction === 'close') {
         onClose();
+      } else {
+        // Tự động reset số lượng và ghi chú khi chọn "Lưu & Quét tiếp"
+        setQuantity('');
+        setNotes('');
       }
     } finally {
       setLocalSaving(false);
@@ -541,7 +546,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                     <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                     Mô tả / Ghi chú
                   </span>
-                  <span className="text-[10px] text-slate-400 font-normal">Tự động điền khi quét</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Không bắt buộc</span>
                 </label>
                 <textarea
                   id="input-ticket-notes"
