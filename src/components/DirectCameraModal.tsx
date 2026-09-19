@@ -15,7 +15,8 @@ import {
   MapPin,
   Edit3,
 } from 'lucide-react';
-import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
+import QrScanner from 'qr-scanner';
+import { decodeImageFile } from '../utils/qrScanner';
 import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
 import { ScanErrorInfo } from './ScanErrorModal';
 
@@ -59,9 +60,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameIdRef = useRef<number | null>(null);
-  const isDecodingRef = useRef(false);
+  const qrScannerRef = useRef<QrScanner | null>(null);
   const hasTriggeredRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,10 +96,15 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     }
   };
 
-  // Stop camera stream cleanly
+  // Stop camera and qr-scanner cleanly
   const stopCamera = useCallback(() => {
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
+    }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
@@ -120,50 +124,50 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     }
   }, [isOpen]);
 
-  // Initialize camera
+  // Initialize camera + qr-scanner
   const startCamera = useCallback(async () => {
-    if (!isOpen) return;
+    if (!isOpen || !videoRef.current) return;
 
     setCameraError(null);
     hasTriggeredRef.current = false;
     setScanLocked(false);
+    stopCamera();
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Trình duyệt không hỗ trợ getUserMedia hoặc chưa cấp quyền camera.');
       }
 
-      stopCamera();
+      const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          if (hasTriggeredRef.current) return;
+          const text = typeof result === 'string' ? result : result.data;
+          if (!text || !text.trim()) return;
+          hasTriggeredRef.current = true;
+          setScanLocked(true);
+          playSuccessChime();
+          setTimeout(() => {
+            stopCamera();
+            onScanSuccess(text);
+            onClose();
+          }, 220);
+        },
+        {
+          preferredCamera: activeDeviceId ?? facingMode,
+          highlightScanRegion: false,
+          highlightCodeOutline: false,
+          returnDetailedScanResult: true,
+        }
+      );
 
-      let videoConstraints: MediaTrackConstraints = {};
+      await scanner.start();
+      qrScannerRef.current = scanner;
 
-      if (activeDeviceId) {
-        videoConstraints = {
-          deviceId: { exact: activeDeviceId }
-        };
-      } else {
-        videoConstraints = {
-          facingMode: { ideal: facingMode }
-        };
-      }
+      // Grab the stream for torch/flip controls
+      const videoTrack = videoRef.current?.srcObject as MediaStream | null;
+      streamRef.current = videoTrack;
 
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
-      } catch (err) {
-        // Fallback nếu máy không hỗ trợ advanced constraints hoặc độ phân giải cao
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: activeDeviceId ? { deviceId: { exact: activeDeviceId } } : { facingMode: { ideal: facingMode } },
-          audio: false
-        });
-      }
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
       setIsCameraActive(true);
       setCameraError(null);
     } catch (err: any) {
@@ -173,7 +177,8 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
         err?.message || 'Không thể truy cập camera. Vui lòng cấp quyền hoặc sử dụng mã mẫu.'
       );
     }
-  }, [isOpen, facingMode, activeDeviceId, stopCamera]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, facingMode, activeDeviceId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -186,129 +191,37 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     };
   }, [isOpen, startCamera, stopCamera]);
 
-  // Frame scanning loop
-  useEffect(() => {
-    if (!isOpen || !isCameraActive || scanLocked) {
-      if (animFrameIdRef.current) {
-        cancelAnimationFrame(animFrameIdRef.current);
-        animFrameIdRef.current = null;
-      }
-      return;
-    }
+  }, [isOpen, startCamera, stopCamera]);
 
-    let isMounted = true;
-    let lastScanTime = 0;
-    const SCAN_INTERVAL_MS = 50; // 20fps scan — fast enough for instant Zalo-like detection
-
-    const loop = async (timestamp: number) => {
-      if (!isMounted || hasTriggeredRef.current) return;
-
-      if (timestamp - lastScanTime > SCAN_INTERVAL_MS) {
-        lastScanTime = timestamp;
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-
-        if (
-          video &&
-          canvas &&
-          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-          video.videoWidth > 0 &&
-          !isDecodingRef.current
-        ) {
-          isDecodingRef.current = true;
-          try {
-            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-            }
-
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            if (ctx) {
-              // Crop the center region based on zoom for accurate QR decoding
-              const z = zoomRef.current;
-              const sw = video.videoWidth / z;
-              const sh = video.videoHeight / z;
-              const sx = (video.videoWidth - sw) / 2;
-              const sy = (video.videoHeight - sh) / 2;
-              canvas.width = sw;
-              canvas.height = sh;
-              ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-              const result = await decodeCanvas(canvas);
-
-              if (result && result.data && result.data.trim() && !hasTriggeredRef.current) {
-                hasTriggeredRef.current = true;
-                setScanLocked(true);
-                playSuccessChime();
-
-                // Trigger callback and close camera form immediately
-                setTimeout(() => {
-                  stopCamera();
-                  onScanSuccess(result.data);
-                  onClose();
-                }, 220);
-              }
-            }
-          } catch (e) {
-            // continue next frame
-          } finally {
-            isDecodingRef.current = false;
-          }
-        }
-      }
-
-      if (isMounted && !hasTriggeredRef.current) {
-        animFrameIdRef.current = requestAnimationFrame(loop);
-      }
-    };
-
-    animFrameIdRef.current = requestAnimationFrame(loop);
-
-    return () => {
-      isMounted = false;
-      if (animFrameIdRef.current) {
-        cancelAnimationFrame(animFrameIdRef.current);
-        animFrameIdRef.current = null;
-      }
-    };
-  }, [isOpen, isCameraActive, scanLocked, onScanSuccess, onClose, stopCamera]);
-
-  // Zoom control — try hardware zoom first, fall back to CSS transform
+  // Zoom control — try hardware zoom first, fall back to CSS transform only
   const handleZoom = async (level: 1 | 2 | 4) => {
     setZoomLevel(level);
     zoomRef.current = level;
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
+    // Try hardware zoom via qr-scanner or stream track
+    const track = (qrScannerRef.current as any)?._activeCamera?._stream?.getVideoTracks?.()[0]
+      ?? streamRef.current?.getVideoTracks?.()[0];
+    if (track) {
       const capabilities = track.getCapabilities?.() as any;
       if (capabilities && 'zoom' in capabilities) {
         const minZ = capabilities.zoom?.min ?? 1;
         const maxZ = capabilities.zoom?.max ?? 8;
         const target = Math.min(Math.max(level, minZ), maxZ);
-        try {
-          await track.applyConstraints({ advanced: [{ zoom: target } as any] });
-          return; // hardware zoom applied — no CSS needed
-        } catch {}
+        try { await track.applyConstraints({ advanced: [{ zoom: target } as any] }); return; } catch {}
       }
     }
-    // CSS transform fallback — visual zoom only (canvas crop handles decoding)
+    // CSS transform fallback — visual zoom handled by style prop
   };
 
-  // Torch toggle
+  // Torch toggle — use qr-scanner's built-in flash API
   const handleToggleTorch = async () => {
     const nextState = !torchOn;
     setTorchOn(nextState);
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
-      const capabilities = track.getCapabilities?.() as any;
-      if (capabilities && 'torch' in capabilities) {
-        try {
-          await track.applyConstraints({
-            advanced: [{ torch: nextState } as any],
-          });
-        } catch (e) {
-          console.warn('Torch failed', e);
-        }
+    try {
+      if (qrScannerRef.current) {
+        await qrScannerRef.current.setFlashState(nextState);
       }
+    } catch {
+      // flash not supported on this device
     }
   };
 
