@@ -138,15 +138,14 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
       if (activeDeviceId) {
         videoConstraints = {
           deviceId: { exact: activeDeviceId },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         };
       } else {
         videoConstraints = {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1920 }, // Yêu cầu độ phân giải cao để OS tự ưu tiên camera chính (thay vì macro/ultra-wide)
-          height: { ideal: 1080 },
-          advanced: [{ focusMode: 'continuous' } as any]
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         };
       }
 
