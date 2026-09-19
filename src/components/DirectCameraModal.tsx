@@ -482,7 +482,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
             )}
 
             {/* Dark mask around viewfinder */}
-            <div className="absolute inset-0 pointer-events-none bg-black/40 backdrop-blur-[1px]" />
+            <div className="absolute inset-0 pointer-events-none bg-black/40" />
 
             {/* Reticle Target Box */}
             <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-2xl flex items-center justify-center">
