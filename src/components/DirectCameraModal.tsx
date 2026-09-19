@@ -138,14 +138,14 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
       if (activeDeviceId) {
         videoConstraints = {
           deviceId: { exact: activeDeviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         };
       } else {
         videoConstraints = {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         };
       }
 
@@ -414,7 +414,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
           </div>
 
           {/* Camera Viewport Area */}
-          <div className="relative w-full aspect-[4/3] bg-slate-950 flex items-center justify-center overflow-hidden select-none">
+          <div className="relative w-full aspect-[4/3] sm:aspect-video bg-slate-950 flex items-center justify-center overflow-hidden select-none">
             {/* Real Camera Stream */}
             <video
               ref={videoRef}
@@ -422,7 +422,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
               muted
               autoPlay
               disablePictureInPicture
-              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
+              className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-300 ${
                 isCameraActive ? 'opacity-100' : 'opacity-0'
               }`}
               style={{
