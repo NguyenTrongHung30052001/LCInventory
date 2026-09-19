@@ -73,15 +73,15 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
   let delimiterUsed: '^^' | '-' | '|' | 'none' = 'none';
   let parts: string[] = [];
 
-  // 1. Ưu tiên kiểm tra dấu "-" trước
-  if (cleanInput.includes('-')) {
-    delimiterUsed = '-';
-    parts = cleanInput.split('-').map((s) => s.trim());
-  } 
-  // 2. Nếu không có thì kiểm tra dấu "^^"
-  else if (cleanInput.includes('^^')) {
+  // 1. Ưu tiên kiểm tra dấu "^^" trước
+  if (cleanInput.includes('^^')) {
     delimiterUsed = '^^';
     parts = cleanInput.split('^^').map((s) => s.trim());
+  } 
+  // 2. Nếu không có thì kiểm tra dấu "-"
+  else if (cleanInput.includes('-')) {
+    delimiterUsed = '-';
+    parts = cleanInput.split('-').map((s) => s.trim());
   } 
   // 3. Dự phòng cho dấu "|"
   else if (cleanInput.includes('|')) {
