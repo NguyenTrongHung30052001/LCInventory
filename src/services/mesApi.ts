@@ -45,24 +45,24 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
 
   const noteVal = ticket.notes?.trim() || '';
 
+  const truncate = (str: string | undefined, max: number) => (str || '').trim().substring(0, max);
+
   const payload: MesInventoryPayload = {
-    warehouseCode: ticket.warehouseCode?.trim() || 'FGW',
-    location: ticket.warehouseLocation?.trim() || 'A1-02',
-    scannedBy: ticket.scannedBy?.trim() || '105',
+    warehouseCode: truncate(ticket.warehouseCode || 'FGW', 50),
+    location: truncate(ticket.warehouseLocation || 'A1-02', 50),
+    scannedBy: truncate(ticket.scannedBy || '105', 50),
     scannedAt: formatToTimezonePlus7(ticket.createdAt || Date.now()),
-    qrCode:
-      ticket.rawQr ||
-      `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`,
-    materialCode: ticket.materialCode || '',
-    color: ticket.color || '',
-    size: ticket.size || '',
-    length: ticket.length || '',
-    lotNumber: ticket.batchNumber || '',
-    productionOrder: ticket.productionOrder || '',
-    unit: ticket.unit || 'MET',
+    qrCode: truncate(ticket.rawQr || `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`, 500),
+    materialCode: truncate(ticket.materialCode, 100),
+    color: truncate(ticket.color, 50),
+    size: truncate(ticket.size, 50),
+    length: truncate(ticket.length, 50),
+    lotNumber: truncate(ticket.batchNumber, 50),
+    productionOrder: truncate(ticket.productionOrder, 50),
+    unit: truncate(ticket.unit || 'MET', 20),
     quantity: numericQty,
-    note: noteVal,
-    notes: noteVal,
+    note: truncate(noteVal, 500),
+    notes: truncate(noteVal, 500),
   };
 
   const apiBase = getApiBase();
