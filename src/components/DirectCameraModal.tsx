@@ -49,6 +49,8 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
   const [showSamplePicker, setShowSamplePicker] = useState(false);
@@ -106,6 +108,16 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     setTorchOn(false);
   }, []);
 
+  // Load available camera devices
+  useEffect(() => {
+    if (isOpen && navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then((devs) => {
+        const videoDevs = devs.filter((d) => d.kind === 'videoinput');
+        setDevices(videoDevs);
+      }).catch(() => {});
+    }
+  }, [isOpen]);
+
   // Initialize camera
   const startCamera = useCallback(async () => {
     if (!isOpen) return;
@@ -121,16 +133,34 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
 
       stopCamera();
 
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
+      let videoConstraints: MediaTrackConstraints = {};
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (activeDeviceId) {
+        videoConstraints = {
+          deviceId: { exact: activeDeviceId },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        };
+      } else {
+        videoConstraints = {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920 }, // Yêu cầu độ phân giải cao để OS tự ưu tiên camera chính (thay vì macro/ultra-wide)
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' } as any]
+        };
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+      } catch (err) {
+        // Fallback nếu máy không hỗ trợ advanced constraints hoặc độ phân giải cao
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: activeDeviceId ? { deviceId: { exact: activeDeviceId } } : { facingMode: { ideal: facingMode } },
+          audio: false
+        });
+      }
+
       streamRef.current = stream;
 
       if (videoRef.current) {
@@ -146,7 +176,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
         err?.message || 'Không thể truy cập camera. Vui lòng cấp quyền hoặc sử dụng mã mẫu.'
       );
     }
-  }, [isOpen, facingMode, stopCamera]);
+  }, [isOpen, facingMode, activeDeviceId, stopCamera]);
 
   useEffect(() => {
     if (isOpen) {
@@ -257,9 +287,25 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     }
   };
 
-  // Flip camera
+  // Flip camera (Cycle through all available cameras to bypass blurry macro lenses)
   const handleFlipCamera = () => {
-    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+    if (devices.length > 2) {
+      let currentIndex = -1;
+      if (activeDeviceId) {
+        currentIndex = devices.findIndex((d) => d.deviceId === activeDeviceId);
+      } else if (streamRef.current) {
+        const track = streamRef.current.getVideoTracks()[0];
+        const settings = track.getSettings();
+        if (settings.deviceId) {
+          currentIndex = devices.findIndex((d) => d.deviceId === settings.deviceId);
+        }
+      }
+      const nextIndex = (currentIndex + 1) % devices.length;
+      setActiveDeviceId(devices[nextIndex].deviceId);
+    } else {
+      setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+      setActiveDeviceId(null);
+    }
   };
 
   // Select sample QR to instantly test
