@@ -376,7 +376,8 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
               playsInline
               muted
               autoPlay
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              disablePictureInPicture
+              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
                 isCameraActive ? 'opacity-100' : 'opacity-0'
               }`}
               style={{
@@ -620,52 +621,8 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
                     <span>Tự điền</span>
                   </button>
                 )}
-
-                <button
-                  id="btn-toggle-sample-list"
-                  type="button"
-                  onClick={() => setShowSamplePicker((prev) => !prev)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  <Sparkles className="h-3 w-3" />
-                  <span>{showSamplePicker ? 'Đóng' : 'Mẫu thử'}</span>
-                </button>
               </div>
             </div>
-
-            {/* Expandable Sample QRs for quick testing */}
-            {showSamplePicker && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto"
-              >
-                {(samples || SAMPLE_MATERIAL_QRS).map((item, idx) => {
-                  const val = item.raw || item.code || '';
-                  const desc = item.description || item.desc || '';
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectSample(val)}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-emerald-950/60 border border-slate-700/60 hover:border-emerald-500/50 text-left transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-200 block truncate">
-                          {item.label}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block truncate">
-                          {desc || val}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-emerald-400 font-semibold shrink-0 ml-2">
-                        Chọn &rarr;
-                      </span>
-                    </button>
-                  );
-                })}
-              </motion.div>
-            )}
           </div>
         </motion.div>
       </div>
