@@ -306,8 +306,6 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
         {/* Backdrop click */}
         <div className="absolute inset-0" onClick={onClose} />
 
-        {/* Hidden canvas for video frame decoding */}
-        <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
         <input
           ref={fileInputRef}
           type="file"
