@@ -73,24 +73,22 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
   let delimiterUsed: '^^' | '-' | '|' | 'none' = 'none';
   let parts: string[] = [];
 
-  // 1. Check if ^^ is used
-  if (cleanInput.includes('^^')) {
-    delimiterUsed = '^^';
-    parts = cleanInput.split('^^').map((s) => s.trim());
-  } else if (cleanInput.includes('|')) {
-    // 2. Check if | is used (e.g. MES barcode standard)
-    delimiterUsed = '|';
-    parts = cleanInput.split('|').map((s) => s.trim());
-  } else if (cleanInput.includes(' - ')) {
-    // 3. Check if " - " with spaces is used
-    delimiterUsed = '-';
-    parts = cleanInput.split(' - ').map((s) => s.trim());
-  } else if (cleanInput.includes('-') && cleanInput.split('-').length >= 6) {
-    // 4. Check if plain "-" is used with at least 6 parts
+  // 1. Ưu tiên kiểm tra dấu "-" trước
+  if (cleanInput.includes('-')) {
     delimiterUsed = '-';
     parts = cleanInput.split('-').map((s) => s.trim());
+  } 
+  // 2. Nếu không có thì kiểm tra dấu "^^"
+  else if (cleanInput.includes('^^')) {
+    delimiterUsed = '^^';
+    parts = cleanInput.split('^^').map((s) => s.trim());
+  } 
+  // 3. Dự phòng cho dấu "|"
+  else if (cleanInput.includes('|')) {
+    delimiterUsed = '|';
+    parts = cleanInput.split('|').map((s) => s.trim());
   } else {
-    // Single value or fallback (cannot split into 6 parts)
+    // Single value or fallback
     parts = [cleanInput];
   }
 
