@@ -1,18 +1,24 @@
 import jsQR from 'jsqr';
+import { BrowserQRCodeReader } from '@zxing/browser';
+import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 
-// Check if BarcodeDetector is supported natively in window
+// ── 1. Native BarcodeDetector (Chrome Android, Edge) ──────────────────────────
 const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
-
 let barcodeDetectorInstance: any = null;
 if (hasBarcodeDetector) {
   try {
-    barcodeDetectorInstance = new (window as any).BarcodeDetector({
-      formats: ['qr_code'],
-    });
-  } catch (e) {
-    console.warn('BarcodeDetector initialization failed, falling back to jsQR', e);
+    barcodeDetectorInstance = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+  } catch {
+    // ignore
   }
 }
+
+// ── 2. ZXing reader (best tolerance for blur/angle/low-light) ─────────────────
+const hints = new Map();
+hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+hints.set(DecodeHintType.TRY_HARDER, true);
+// Reuse a single reader instance — do NOT call reset() between frames for performance
+const zxingReader = new BrowserQRCodeReader(hints);
 
 export interface DecodeResult {
   data: string;
@@ -25,21 +31,17 @@ export interface DecodeResult {
 }
 
 /**
- * Decode QR from an HTMLCanvasElement
+ * Decode a QR from an HTMLCanvasElement.
+ * Tries engines in order: BarcodeDetector → ZXing → jsQR
  */
 export async function decodeCanvas(canvas: HTMLCanvasElement): Promise<DecodeResult | null> {
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
+  if (canvas.width === 0 || canvas.height === 0) return null;
 
-  const width = canvas.width;
-  const height = canvas.height;
-  if (width === 0 || height === 0) return null;
-
-  // 1. Try native BarcodeDetector if available
+  // ── Engine 1: Native BarcodeDetector (fastest on Android Chrome) ──────────
   if (barcodeDetectorInstance) {
     try {
       const barcodes = await barcodeDetectorInstance.detect(canvas);
-      if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+      if (barcodes?.length && barcodes[0].rawValue) {
         const b = barcodes[0];
         return {
           data: b.rawValue,
@@ -54,28 +56,39 @@ export async function decodeCanvas(canvas: HTMLCanvasElement): Promise<DecodeRes
         };
       }
     } catch {
-      // Fall through to jsQR
+      // fall through
     }
   }
 
-  // 2. jsQR decoding
+  // ── Engine 2: ZXing (best for blurry/angled/partial codes like Zalo) ──────
   try {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'attemptBoth',
-    });
-    if (code && code.data) {
-      return {
-        data: code.data,
-        location: code.location,
-      };
+    const result = await zxingReader.decodeFromCanvas(canvas);
+    if (result?.getText()) {
+      return { data: result.getText() };
     }
-  } catch (err) {
-    console.error('jsQR decode error', err);
+  } catch {
+    // NotFoundException thrown when no QR found — this is normal, suppress it
+  }
+
+  // ── Engine 3: jsQR fallback ───────────────────────────────────────────────
+  try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (ctx) {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth',
+      });
+      if (code?.data) {
+        return { data: code.data, location: code.location };
+      }
+    }
+  } catch {
+    // ignore
   }
 
   return null;
 }
+
 
 /**
  * Decode QR from an image file / Data URL

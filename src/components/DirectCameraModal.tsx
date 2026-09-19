@@ -198,7 +198,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
 
     let isMounted = true;
     let lastScanTime = 0;
-    const SCAN_INTERVAL_MS = 100; // Scan 10 times a second for fast, instantaneous detection
+    const SCAN_INTERVAL_MS = 50; // 20fps scan — fast enough for instant Zalo-like detection
 
     const loop = async (timestamp: number) => {
       if (!isMounted || hasTriggeredRef.current) return;
