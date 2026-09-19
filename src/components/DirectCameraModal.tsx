@@ -137,15 +137,11 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
 
       if (activeDeviceId) {
         videoConstraints = {
-          deviceId: { exact: activeDeviceId },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          deviceId: { exact: activeDeviceId }
         };
       } else {
         videoConstraints = {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          facingMode: { ideal: facingMode }
         };
       }
 
