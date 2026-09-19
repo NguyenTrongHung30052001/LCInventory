@@ -54,7 +54,7 @@ export async function sendToMesInventory(ticket: MaterialTicket): Promise<MesApi
     scannedAt: formatToTimezonePlus7(ticket.createdAt || Date.now()),
     qrCode: truncate(ticket.rawQr || `${ticket.materialCode}|${ticket.color}|${ticket.size}|${ticket.length}|${ticket.batchNumber}|${ticket.productionOrder}`, 500),
     materialCode: truncate(ticket.materialCode, 100),
-    color: truncate(ticket.color, 50),
+    color: ticket.color || '',
     size: truncate(ticket.size, 50),
     length: truncate(ticket.length, 50),
     lotNumber: truncate(ticket.batchNumber, 50),
