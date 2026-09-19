@@ -16,9 +16,13 @@ import {
   Edit3,
 } from 'lucide-react';
 import QrScanner from 'qr-scanner';
-import { decodeImageFile } from '../utils/qrScanner';
+import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min.js?url';
+import { decodeCanvas, decodeImageFile } from '../utils/qrScanner';
 import { SAMPLE_MATERIAL_QRS } from '../utils/materialQrParser';
 import { ScanErrorInfo } from './ScanErrorModal';
+
+// Fix worker path for Vite bundler
+(QrScanner as any).WORKER_PATH = QrScannerWorkerPath;
 
 interface DirectCameraModalProps {
   isOpen: boolean;
@@ -61,6 +65,10 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
+  // Canvas fallback refs (parallel scan alongside qr-scanner)
+  const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
+  const animFrameIdRef = useRef<number | null>(null);
+  const isDecodingRef = useRef(false);
   const hasTriggeredRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,11 +104,14 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     }
   };
 
-  // Stop camera and qr-scanner cleanly
+  // Stop camera, qr-scanner and canvas loop
   const stopCamera = useCallback(() => {
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
+    }
     if (qrScannerRef.current) {
-      qrScannerRef.current.stop();
-      qrScannerRef.current.destroy();
+      try { qrScannerRef.current.stop(); qrScannerRef.current.destroy(); } catch {}
       qrScannerRef.current = null;
     }
     if (streamRef.current) {
@@ -190,6 +201,67 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
       stopCamera();
     };
   }, [isOpen, startCamera, stopCamera]);
+
+  // Parallel canvas scan loop — fallback when qr-scanner WASM doesn't fire
+  useEffect(() => {
+    if (!isOpen || !isCameraActive || scanLocked) {
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+      return;
+    }
+
+    let mounted = true;
+    let lastScan = 0;
+
+    const loop = async (ts: number) => {
+      if (!mounted || hasTriggeredRef.current) return;
+
+      if (ts - lastScan > 80) {
+        lastScan = ts;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+
+        if (
+          video &&
+          canvas &&
+          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          video.videoWidth > 0 &&
+          !isDecodingRef.current
+        ) {
+          isDecodingRef.current = true;
+          try {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const result = await decodeCanvas(canvas);
+              if (result?.data?.trim() && !hasTriggeredRef.current) {
+                hasTriggeredRef.current = true;
+                setScanLocked(true);
+                playSuccessChime();
+                setTimeout(() => { stopCamera(); onScanSuccess(result.data); onClose(); }, 220);
+              }
+            }
+          } catch { /* continue */ } finally {
+            isDecodingRef.current = false;
+          }
+        }
+      }
+
+      if (mounted && !hasTriggeredRef.current) {
+        animFrameIdRef.current = requestAnimationFrame(loop);
+      }
+    };
+
+    animFrameIdRef.current = requestAnimationFrame(loop);
+    return () => {
+      mounted = false;
+      if (animFrameIdRef.current) { cancelAnimationFrame(animFrameIdRef.current); animFrameIdRef.current = null; }
+    };
+  }, [isOpen, isCameraActive, scanLocked, onScanSuccess, onClose, stopCamera]);
 
 
   // Zoom control — try hardware zoom first, fall back to CSS transform only
