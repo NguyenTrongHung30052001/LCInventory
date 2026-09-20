@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -53,6 +53,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   defaultScannedBy = '105',
 }) => {
   const [rawQr, setRawQr] = useState('');
+  const quantityInputRef = useRef<HTMLInputElement>(null);
 
   // 6 fields from QR
   const [materialCode, setMaterialCode] = useState('');
@@ -100,6 +101,11 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   useEffect(() => {
     if (scannedMaterialQr) {
       applyQrString(scannedMaterialQr);
+      // Auto-focus ô số lượng sau khi quét QR thành công
+      setTimeout(() => {
+        quantityInputRef.current?.focus();
+        quantityInputRef.current?.select();
+      }, 100);
     }
   }, [scannedMaterialQr]);
 
@@ -172,6 +178,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
 
       await onSaveTicket(newTicket, submitAction);
       if (submitAction === 'close') {
+        // Reset số lượng, ghi chú và xóa QR đã quét trước khi đóng
+        setQuantity('');
+        setNotes('');
+        onClearScannedMaterialQr();
         onClose();
       } else {
         // Tự động reset số lượng và ghi chú khi chọn "Lưu & Quét tiếp"
@@ -491,10 +501,10 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
 
                   
           <input
+  ref={quantityInputRef}
   id="input-quantity"
   type="text"
   inputMode="decimal"
-
   pattern="[0-9]*[,]?[0-9]*"
   required value={quantity}
   onChange={
