@@ -226,14 +226,16 @@ export default function App() {
       setIsLocationModalOpen(true);
     } else {
       // scannerTarget === 'material'
-      const parsed = parseMaterialQr(scannedRaw);
+      const parsed = parseMaterialQr(scannedRaw, urlConfig.type as 'normal' | 'tip');
       if (!parsed.isValid) {
         setScanError({
           type: 'invalid_format',
           title: 'Mã QR không đúng quy chuẩn',
           message:
             parsed.errorReason ||
-            'Mã QR vật tư không đủ 6 trường thông tin hoặc sai định dạng quy chuẩn của Liên Châu.',
+            (urlConfig.type === 'tip'
+              ? 'Mã QR không đủ 3 trường (Mã vật tư, Lô) hoặc sai quy chuẩn Tip.'
+              : 'Mã QR vật tư không đủ 6 trường thông tin hoặc sai định dạng quy chuẩn của Liên Châu.'),
           rawQr: scannedRaw,
           parsed,
         });
