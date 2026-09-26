@@ -126,12 +126,12 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
     setIsParsed(parsed.isValid);
     setDetectedType(parsed.detectedType || type);
 
-    if (parsed.materialCode) setMaterialCode(parsed.materialCode);
-    if (parsed.color) setColor(parsed.color);
-    if (parsed.size) setSize(parsed.size);
-    if (parsed.length) setLength(parsed.length);
-    if (parsed.batchNumber) setBatchNumber(parsed.batchNumber);
-    if (parsed.productionOrder) setProductionOrder(parsed.productionOrder);
+    setMaterialCode(parsed.materialCode || '');
+    setColor(parsed.color || '');
+    setSize(parsed.size || '');
+    setLength(parsed.length || '');
+    setBatchNumber(parsed.batchNumber || '');
+    setProductionOrder(parsed.productionOrder || '');
     if (parsed.detectedUnit) setUnit(parsed.detectedUnit);
     // Không tự động điền ghi chú nữa
     setNotes('');
