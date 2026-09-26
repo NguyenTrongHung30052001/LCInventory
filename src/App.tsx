@@ -822,7 +822,7 @@ export default function App() {
         description={
           scannerTarget === 'material'
             ? (urlConfig.type === 'tip' 
-               ? `Vị trí: ${currentLocation || 'A1-02'} — Bạn đang quét tip (Mã vật tư ^^00^^ Lô)` 
+               ? `Vị trí: ${currentLocation || 'A1-02'} — Bạn đang quét tip (Mã vật tư ^^ ... ^^ Lô)` 
                : `Vị trí: ${currentLocation || 'A1-02'} — Đưa camera vào tem QR vật tư`)
             : 'Đưa camera vào tem mã vị trí kệ kho'
         }

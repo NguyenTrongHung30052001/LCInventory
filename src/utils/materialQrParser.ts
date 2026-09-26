@@ -83,21 +83,21 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
   let errorReason: string | undefined;
 
   if (type === 'tip') {
-    // Tip logic: format is "mã vật tư ^^00^^ lô sản xuất"
-    if (cleanInput.includes('^^00^^')) {
+    // Tip logic: format is "mã vật tư ^^ phần_tử_thứ_2 ^^ lô sản xuất"
+    if (cleanInput.includes('^^')) {
       delimiterUsed = '^^';
-      parts = cleanInput.split('^^00^^').map((s) => s.trim());
+      parts = cleanInput.split('^^').map((s) => s.trim());
     } else {
       parts = [cleanInput];
     }
     
     materialCode = parts[0] || '';
-    batchNumber = parts[1] || '';
+    batchNumber = parts[2] || '';
     
-    isValid = parts.length >= 2 && Boolean(materialCode);
+    isValid = parts.length >= 3 && Boolean(materialCode);
     if (!isValid) {
-      if (parts.length < 2) {
-        errorReason = "Mã QR tip không chứa chuỗi phân tách '^^00^^'.";
+      if (parts.length < 3) {
+        errorReason = "Mã QR tip không đủ 3 phần (yêu cầu phân tách bằng '^^').";
         missingFields = ['Lô sản xuất'];
       }
       if (!materialCode) {
@@ -317,9 +317,9 @@ export const SAMPLE_MATERIAL_QRS = [
     description: 'Mã lỗi không chứa dấu ^^ hoặc -',
   },
   {
-    label: 'Mẫu Tip (Dấu ^^00^^)',
+    label: 'Mẫu Tip (Dấu ^^)',
     delimiter: '^^' as const,
-    raw: 'TIP-VT-123 ^^00^^ LOT-TIP-2026',
+    raw: 'TIP-VT-123 ^^ 0110 ^^ LOT-TIP-2026',
     description: 'Tip: Mã vật tư TIP-VT-123, Lô LOT-TIP-2026',
   },
 ];
