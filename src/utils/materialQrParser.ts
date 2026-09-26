@@ -203,7 +203,7 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     };
   });
 
-  if (type === 'normal') {
+  if (!isTipMode && !isFourPartsMode) {
     missingFields = fieldAnalysis.filter((f) => !f.isProvided).map((f) => f.label);
     isValid = parts.length >= 6 && Boolean(materialCode);
 
@@ -217,10 +217,12 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
         errorReason = 'Trường đầu tiên (Mã vật tư) bị để trống.';
       }
     }
-  } else {
-     // Re-calculate missing fields for tip based on field analysis to ensure standard field labels are used if needed
+  } else if (isTipMode) {
      const expectedTipFields = ['materialCode', 'batchNumber'];
      missingFields = fieldAnalysis.filter(f => expectedTipFields.includes(f.key) && !f.isProvided).map(f => f.label);
+  } else if (isFourPartsMode) {
+     const expectedFourFields = ['materialCode', 'color', 'batchNumber'];
+     missingFields = fieldAnalysis.filter(f => expectedFourFields.includes(f.key) && !f.isProvided).map(f => f.label);
   }
 
   return {
