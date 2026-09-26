@@ -283,17 +283,40 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
     // CSS transform fallback — visual zoom handled by style prop
   };
 
-  // Torch toggle — use qr-scanner's built-in flash API
+  // Torch toggle — try qr-scanner API first, then direct track constraints fallback
   const handleToggleTorch = async () => {
     const nextState = !torchOn;
     setTorchOn(nextState);
-    try {
-      if (qrScannerRef.current) {
+
+    // Method 1: qr-scanner built-in flash API
+    if (qrScannerRef.current) {
+      try {
         await qrScannerRef.current.setFlashState(nextState);
+        return; // success
+      } catch {
+        // fall through to method 2
       }
-    } catch {
-      // flash not supported on this device
     }
+
+    // Method 2: Direct MediaStreamTrack torch constraint
+    // qr-scanner exposes the active camera's stream via _activeCamera._stream
+    const track =
+      (qrScannerRef.current as any)?._activeCamera?._stream?.getVideoTracks?.()[0]
+      ?? streamRef.current?.getVideoTracks?.()[0]
+      ?? (videoRef.current?.srcObject as MediaStream | null)?.getVideoTracks?.()[0];
+
+    if (track) {
+      try {
+        await track.applyConstraints({ advanced: [{ torch: nextState } as any] });
+        return; // success
+      } catch {
+        // fall through — torch not supported
+      }
+    }
+
+    // Both methods failed — revert UI state so button doesn't show as "on" falsely
+    console.warn('[Torch] Flash/torch not supported on this device or camera track not ready.');
+    setTorchOn(false);
   };
 
   // Flip camera (Cycle through all available cameras to bypass blurry macro lenses)
