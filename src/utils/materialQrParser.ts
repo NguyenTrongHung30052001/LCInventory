@@ -29,7 +29,7 @@ export interface ParsedMaterialQr {
   missingFields: string[];
   fieldAnalysis: FieldAnalysis[];
   errorReason?: string;
-  detectedType: 'normal' | 'tip';
+  detectedType: 'normal' | 'tip' | 'four_parts';
 }
 
 export const MATERIAL_QR_STANDARD_FIELDS = [
@@ -85,11 +85,14 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
   let errorReason: string | undefined;
 
   let isTipMode = type === 'tip';
+  let isFourPartsMode = false;
 
   if (!isTipMode && cleanInput.includes('^^')) {
     const autoParts = cleanInput.split('^^').map((s) => s.trim());
     if (autoParts.length === 3) {
       isTipMode = true;
+    } else if (autoParts.length === 4) {
+      isFourPartsMode = true;
     }
   }
 
@@ -109,6 +112,30 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     if (!isValid) {
       if (parts.length < 3) {
         errorReason = "Mã QR tip không đủ 3 phần (yêu cầu phân tách bằng '^^').";
+        missingFields = ['Lô sản xuất'];
+      }
+      if (!materialCode) {
+        errorReason = 'Mã vật tư bị để trống.';
+        if (!missingFields.includes('Mã vật tư')) missingFields.push('Mã vật tư');
+      }
+    }
+  } else if (isFourPartsMode) {
+    if (cleanInput.includes('^^')) {
+      delimiterUsed = '^^';
+      parts = cleanInput.split('^^').map((s) => s.trim());
+    } else {
+      parts = [cleanInput];
+    }
+    
+    // Phần tử thứ 2 (index 1) là mã vật tư, thứ 3 là màu, thứ 4 là lô
+    materialCode = parts[1] || '';
+    color = parts[2] || '';
+    batchNumber = parts[3] || '';
+    
+    isValid = parts.length >= 4 && Boolean(materialCode);
+    if (!isValid) {
+      if (parts.length < 4) {
+        errorReason = "Mã QR loại 4 phần không đủ 4 phần (yêu cầu phân tách bằng '^^').";
         missingFields = ['Lô sản xuất'];
       }
       if (!materialCode) {
@@ -219,7 +246,7 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     missingFields,
     fieldAnalysis,
     errorReason,
-    detectedType: isTipMode ? 'tip' : 'normal',
+    detectedType: isTipMode ? 'tip' : (isFourPartsMode ? 'four_parts' : 'normal'),
   };
 }
 
@@ -332,6 +359,12 @@ export const SAMPLE_MATERIAL_QRS = [
     delimiter: '^^' as const,
     raw: 'TIP-VT-123 ^^ 0110 ^^ LOT-TIP-2026',
     description: 'Tip: Mã vật tư TIP-VT-123, Lô LOT-TIP-2026',
+  },
+  {
+    label: 'Mẫu 4 phần (Dấu ^^)',
+    delimiter: '^^' as const,
+    raw: 'IGNORE_ME ^^ T06-2000 ^^ Đỏ ^^ LOT-2023',
+    description: '4 phần: Bỏ qua ^^ Mã vật tư ^^ Màu ^^ Lô',
   },
 ];
 

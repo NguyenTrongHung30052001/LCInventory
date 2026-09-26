@@ -120,15 +120,15 @@ export const ScanErrorModal: React.FC<ScanErrorModalProps> = ({
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
                   <span className="flex items-center gap-1">
                     <Layers className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                    Đối chiếu {error.message.includes('Tip') ? '2' : '6'} trường quy chuẩn:
+                    Đối chiếu {error.message.includes('Tip') ? '2' : error.message.includes('4 phần') ? '3' : '6'} trường quy chuẩn:
                   </span>
                   <span className="font-mono text-rose-600 dark:text-rose-400">
-                    {error.parsed.fieldAnalysis.filter((f) => f.isProvided && (error.message.includes('Tip') ? ['materialCode', 'batchNumber'].includes(f.key) : true)).length}/{error.message.includes('Tip') ? '2' : '6'} trường
+                    {error.parsed.fieldAnalysis.filter((f) => f.isProvided && (error.message.includes('Tip') ? ['materialCode', 'batchNumber'].includes(f.key) : error.message.includes('4 phần') ? ['materialCode', 'color', 'batchNumber'].includes(f.key) : true)).length}/{error.message.includes('Tip') ? '2' : error.message.includes('4 phần') ? '3' : '6'} trường
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  {error.parsed.fieldAnalysis.filter(f => error.message.includes('Tip') ? ['materialCode', 'batchNumber'].includes(f.key) : true).map((field) => (
+                  {error.parsed.fieldAnalysis.filter(f => error.message.includes('Tip') ? ['materialCode', 'batchNumber'].includes(f.key) : error.message.includes('4 phần') ? ['materialCode', 'color', 'batchNumber'].includes(f.key) : true).map((field) => (
                     <div
                       key={field.key}
                       className={`p-1.5 rounded-lg border text-[11px] flex items-start gap-1.5 ${
@@ -166,13 +166,13 @@ export const ScanErrorModal: React.FC<ScanErrorModalProps> = ({
             <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] space-y-1">
               <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
                 <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                Cấu trúc QR {error.message.includes('Tip') ? 'Tip' : 'vật tư'} chuẩn:
+                Cấu trúc QR {error.message.includes('Tip') ? 'Tip' : error.message.includes('4 phần') ? 'dạng 4 phần' : 'vật tư'} chuẩn:
               </span>
               <p className="font-mono text-[10px] text-amber-800 dark:text-amber-300 bg-white/70 dark:bg-black/30 p-1.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40 break-all leading-relaxed">
-                {error.message.includes('Tip') ? 'Mã vật tư ^^ ... ^^ Lô sản xuất' : 'Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lệnh sản xuất ^^ Lô sản xuất'}
+                {error.message.includes('Tip') ? 'Mã vật tư ^^ ... ^^ Lô sản xuất' : error.message.includes('4 phần') ? '... ^^ Mã vật tư ^^ Màu ^^ Lô sản xuất' : 'Mã vật tư ^^ Màu ^^ Size ^^ Length ^^ Lệnh sản xuất ^^ Lô sản xuất'}
               </p>
               <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                (Hệ thống chấp nhận dấu phân tách là <strong>^^</strong>{error.message.includes('Tip') ? '' : ' hoặc <strong>-</strong>'})
+                (Hệ thống chấp nhận dấu phân tách là <strong>^^</strong>{error.message.includes('Tip') || error.message.includes('4 phần') ? '' : ' hoặc <strong>-</strong>'})
               </p>
             </div>
           </div>
