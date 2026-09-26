@@ -40,7 +40,7 @@ export const MATERIAL_QR_STANDARD_FIELDS = [
   { index: 6, key: 'batchNumber', label: 'Lô sản xuất (Lot)', example: 'LOT-2026-09' },
 ];
 
-export function parseMaterialQr(input: string): ParsedMaterialQr {
+export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'): ParsedMaterialQr {
   const cleanInput = (input || '').trim();
 
   if (!cleanInput) {
@@ -72,36 +72,71 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
 
   let delimiterUsed: '^^' | '-' | '|' | 'none' = 'none';
   let parts: string[] = [];
+  let materialCode = '';
+  let color = '';
+  let size = '';
+  let length = '';
+  let productionOrder = '';
+  let batchNumber = '';
+  let isValid = false;
+  let missingFields: string[] = [];
+  let errorReason: string | undefined;
 
-  // 1. Ưu tiên kiểm tra dấu "^^" trước
-  if (cleanInput.includes('^^')) {
-    delimiterUsed = '^^';
-    parts = cleanInput.split('^^').map((s) => s.trim());
-  } 
-  // 2. Nếu không có thì kiểm tra dấu "-"
-  else if (cleanInput.includes('-')) {
-    delimiterUsed = '-';
-    parts = cleanInput.split('-').map((s) => s.trim());
-  } 
-  // 3. Dự phòng cho dấu "|"
-  else if (cleanInput.includes('|')) {
-    delimiterUsed = '|';
-    parts = cleanInput.split('|').map((s) => s.trim());
+  if (type === 'tip') {
+    // Tip logic: format is "mã vật tư ^^00^^ lô sản xuất"
+    if (cleanInput.includes('^^00^^')) {
+      delimiterUsed = '^^';
+      parts = cleanInput.split('^^00^^').map((s) => s.trim());
+    } else {
+      parts = [cleanInput];
+    }
+    
+    materialCode = parts[0] || '';
+    batchNumber = parts[1] || '';
+    
+    isValid = parts.length >= 2 && Boolean(materialCode);
+    if (!isValid) {
+      if (parts.length < 2) {
+        errorReason = "Mã QR tip không chứa chuỗi phân tách '^^00^^'.";
+        missingFields = ['Lô sản xuất'];
+      }
+      if (!materialCode) {
+        errorReason = 'Mã vật tư bị để trống.';
+        if (!missingFields.includes('Mã vật tư')) missingFields.push('Mã vật tư');
+      }
+    }
   } else {
-    // Single value or fallback
-    parts = [cleanInput];
-  }
+    // Normal logic
+    // 1. Ưu tiên kiểm tra dấu "^^" trước
+    if (cleanInput.includes('^^')) {
+      delimiterUsed = '^^';
+      parts = cleanInput.split('^^').map((s) => s.trim());
+    } 
+    // 2. Nếu không có thì kiểm tra dấu "-"
+    else if (cleanInput.includes('-')) {
+      delimiterUsed = '-';
+      parts = cleanInput.split('-').map((s) => s.trim());
+    } 
+    // 3. Dự phòng cho dấu "|"
+    else if (cleanInput.includes('|')) {
+      delimiterUsed = '|';
+      parts = cleanInput.split('|').map((s) => s.trim());
+    } else {
+      // Single value or fallback
+      parts = [cleanInput];
+    }
 
-  const materialCode = parts[0] || '';
-  const color = parts[1] || '';
-  const size = parts[2] || '';
-  const length = parts[3] || '';
-  const productionOrder = parts[4] || '';
-  const batchNumber = parts[5] || '';
+    materialCode = parts[0] || '';
+    color = parts[1] || '';
+    size = parts[2] || '';
+    length = parts[3] || '';
+    productionOrder = parts[4] || '';
+    batchNumber = parts[5] || '';
+  }
 
   // Auto-detect unit if 7th part exists (e.g. ^^M, ^^kg, ^^pcs, ^^pair)
   let detectedUnit: 'MET' | 'KG' | 'PCS' | 'PAIR' | undefined;
-  if (parts.length > 6) {
+  if (type === 'normal' && parts.length > 6) {
     const rawUnit = parts[6].toUpperCase().trim();
     if (rawUnit === 'M' || rawUnit === 'MET' || rawUnit === 'MÉT' || rawUnit === 'METER') {
       detectedUnit = 'MET';
@@ -128,6 +163,7 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
 
   const fieldAnalysis: FieldAnalysis[] = MATERIAL_QR_STANDARD_FIELDS.map((field, idx) => {
     const val = extractedValues[idx] || '';
+    // For tip type, only Material Code and Batch Number are relevant, others might not be "missing" but just N/A
     return {
       index: field.index,
       label: field.label,
@@ -137,19 +173,24 @@ export function parseMaterialQr(input: string): ParsedMaterialQr {
     };
   });
 
-  const missingFields = fieldAnalysis.filter((f) => !f.isProvided).map((f) => f.label);
-  const isValid = parts.length >= 6 && Boolean(materialCode);
+  if (type === 'normal') {
+    missingFields = fieldAnalysis.filter((f) => !f.isProvided).map((f) => f.label);
+    isValid = parts.length >= 6 && Boolean(materialCode);
 
-  let errorReason: string | undefined;
-  if (!isValid) {
-    if (delimiterUsed === 'none' || parts.length <= 1) {
-      errorReason =
-        "Mã QR không chứa dấu phân tách quy chuẩn ('^^' hoặc '-'). Toàn bộ chuỗi chỉ nhận diện được 1 trường, không thể bóc tách 6 trường.";
-    } else if (parts.length < 6) {
-      errorReason = `Mã QR chỉ nhận diện được ${parts.length}/6 trường thông tin. Còn thiếu: ${missingFields.join(', ')}.`;
-    } else if (!materialCode) {
-      errorReason = 'Trường đầu tiên (Mã vật tư) bị để trống.';
+    if (!isValid) {
+      if (delimiterUsed === 'none' || parts.length <= 1) {
+        errorReason =
+          "Mã QR không chứa dấu phân tách quy chuẩn ('^^' hoặc '-'). Toàn bộ chuỗi chỉ nhận diện được 1 trường, không thể bóc tách 6 trường.";
+      } else if (parts.length < 6) {
+        errorReason = `Mã QR chỉ nhận diện được ${parts.length}/6 trường thông tin. Còn thiếu: ${missingFields.join(', ')}.`;
+      } else if (!materialCode) {
+        errorReason = 'Trường đầu tiên (Mã vật tư) bị để trống.';
+      }
     }
+  } else {
+     // Re-calculate missing fields for tip based on field analysis to ensure standard field labels are used if needed
+     const expectedTipFields = ['materialCode', 'batchNumber'];
+     missingFields = fieldAnalysis.filter(f => expectedTipFields.includes(f.key) && !f.isProvided).map(f => f.label);
   }
 
   return {
@@ -274,6 +315,12 @@ export const SAMPLE_MATERIAL_QRS = [
     delimiter: 'none' as any,
     raw: 'MA-VAT-TU-KHONG-CO-DAU-PHAN-TACH-12345',
     description: 'Mã lỗi không chứa dấu ^^ hoặc -',
+  },
+  {
+    label: 'Mẫu Tip (Dấu ^^00^^)',
+    delimiter: '^^' as const,
+    raw: 'TIP-VT-123 ^^00^^ LOT-TIP-2026',
+    description: 'Tip: Mã vật tư TIP-VT-123, Lô LOT-TIP-2026',
   },
 ];
 

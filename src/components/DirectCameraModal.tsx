@@ -36,6 +36,7 @@ interface DirectCameraModalProps {
   onSwitchLocation?: () => void;
   onManualEntry?: () => void;
   samples?: { label: string; description?: string; desc?: string; raw?: string; code?: string }[];
+  type?: 'normal' | 'tip';
 }
 
 export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
@@ -50,6 +51,7 @@ export const DirectCameraModal: React.FC<DirectCameraModalProps> = ({
   onSwitchLocation,
   onManualEntry,
   samples,
+  type = 'normal',
 }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
