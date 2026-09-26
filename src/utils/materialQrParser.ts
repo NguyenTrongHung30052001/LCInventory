@@ -29,6 +29,7 @@ export interface ParsedMaterialQr {
   missingFields: string[];
   fieldAnalysis: FieldAnalysis[];
   errorReason?: string;
+  detectedType: 'normal' | 'tip';
 }
 
 export const MATERIAL_QR_STANDARD_FIELDS = [
@@ -67,6 +68,7 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
       missingFields: MATERIAL_QR_STANDARD_FIELDS.map((f) => f.label),
       fieldAnalysis: emptyAnalysis,
       errorReason: 'Mã QR rỗng, không chứa dữ liệu văn bản.',
+      detectedType: 'normal',
     };
   }
 
@@ -82,7 +84,16 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
   let missingFields: string[] = [];
   let errorReason: string | undefined;
 
-  if (type === 'tip') {
+  let isTipMode = type === 'tip';
+
+  if (!isTipMode && cleanInput.includes('^^')) {
+    const autoParts = cleanInput.split('^^').map((s) => s.trim());
+    if (autoParts.length === 3) {
+      isTipMode = true;
+    }
+  }
+
+  if (isTipMode) {
     // Tip logic: format is "mã vật tư ^^ phần_tử_thứ_2 ^^ lô sản xuất"
     if (cleanInput.includes('^^')) {
       delimiterUsed = '^^';
@@ -134,9 +145,8 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     batchNumber = parts[5] || '';
   }
 
-  // Auto-detect unit if 7th part exists (e.g. ^^M, ^^kg, ^^pcs, ^^pair)
   let detectedUnit: 'MET' | 'KG' | 'PCS' | 'PAIR' | undefined;
-  if (type === 'normal' && parts.length > 6) {
+  if (!isTipMode && parts.length > 6) {
     const rawUnit = parts[6].toUpperCase().trim();
     if (rawUnit === 'M' || rawUnit === 'MET' || rawUnit === 'MÉT' || rawUnit === 'METER') {
       detectedUnit = 'MET';
@@ -209,6 +219,7 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     missingFields,
     fieldAnalysis,
     errorReason,
+    detectedType: isTipMode ? 'tip' : 'normal',
   };
 }
 

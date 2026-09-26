@@ -55,6 +55,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
   type = 'normal',
 }) => {
   const [rawQr, setRawQr] = useState('');
+  const [detectedType, setDetectedType] = useState<'normal' | 'tip'>(type as 'normal' | 'tip');
   const quantityInputRef = useRef<HTMLInputElement>(null);
 
   // 6 fields from QR
@@ -121,8 +122,9 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
 
   const applyQrString = (val: string) => {
     setRawQr(val);
-    const parsed = parseMaterialQr(val, type);
+    const parsed = parseMaterialQr(val, type as 'normal' | 'tip');
     setIsParsed(parsed.isValid);
+    setDetectedType(parsed.detectedType || type);
 
     if (parsed.materialCode) setMaterialCode(parsed.materialCode);
     if (parsed.color) setColor(parsed.color);
@@ -273,7 +275,7 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
               <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
                 <span className="flex items-center gap-1.5">
                   <QrCode className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  {type === 'tip' ? 'Mã QR Tip (Bạn đang quét Tip)' : 'Mã QR vật tư'}
+                  {detectedType === 'tip' ? 'Mã QR Tip (Bạn đang quét Tip)' : 'Mã QR vật tư'}
                 </span>
                 {rawQr && (
                   <button
@@ -313,20 +315,20 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
                 <div className="flex items-center justify-end pt-0.5">
                   {isParsed ? (
                     <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      <CheckCircle2 className="h-3 w-3" /> {type === 'tip' ? 'Đã bóc tách 2 trường Tip' : 'Đã bóc tách 6 trường'}
+                      <CheckCircle2 className="h-3 w-3" /> {detectedType === 'tip' ? 'Đã bóc tách 2 trường Tip' : 'Đã bóc tách 6 trường'}
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => {
-                        const parsed = parseMaterialQr(rawQr, type);
+                        const parsed = parseMaterialQr(rawQr, type as 'normal' | 'tip');
                         if (onShowScanError) {
                           onShowScanError({
                             type: 'invalid_format',
                             title: 'Mã QR không đúng quy chuẩn',
                             message:
                               parsed.errorReason ||
-                              (type === 'tip' ? 'Mã QR không đủ 2 trường (Mã vật tư, Lô).' : 'Mã QR không đủ 6 trường thông tin quy chuẩn của Liên Châu.'),
+                              (detectedType === 'tip' ? 'Mã QR không đủ 3 trường (Mã vật tư, Lô).' : 'Mã QR không đủ 6 trường thông tin quy chuẩn của Liên Châu.'),
                             rawQr,
                             parsed,
                           });
@@ -341,11 +343,11 @@ export const MaterialTicketCreateModal: React.FC<MaterialTicketCreateModalProps>
               )}
             </div>
 
-            {/* 2. 6 TRƯỜNG BÓC TÁCH */}
+            {/* 2. TRƯỜNG BÓC TÁCH */}
             <div>
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {type === 'tip' ? '2 trường thông tin Tip' : '6 trường thông tin vật tư'}
+                {detectedType === 'tip' ? '2 trường thông tin Tip' : '6 trường thông tin vật tư'}
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
