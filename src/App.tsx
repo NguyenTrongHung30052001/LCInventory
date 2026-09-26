@@ -800,6 +800,7 @@ export default function App() {
         isSaving={isSaving}
         defaultWarehouseCode={warehouseCode}
         defaultScannedBy={scannedByUserId}
+        type={urlConfig.type as 'normal' | 'tip'}
       />
 
       {/* MODAL 2: DIRECT CAMERA SCANNER */}
@@ -812,14 +813,17 @@ export default function App() {
         currentLocation={currentLocation}
         onSwitchLocation={handleSwitchLocation}
         onManualEntry={handleManualEntryFromCamera}
+        type={urlConfig.type as 'normal' | 'tip'}
         title={
           scannerTarget === 'material'
-            ? 'Quét mã QR vật tư'
+            ? (urlConfig.type === 'tip' ? 'Quét mã QR Tip' : 'Quét mã QR vật tư')
             : 'Bước 1: Quét vị trí kho'
         }
         description={
           scannerTarget === 'material'
-            ? `Vị trí: ${currentLocation || 'A1-02'} — Đưa camera vào tem QR vật tư`
+            ? (urlConfig.type === 'tip' 
+               ? `Vị trí: ${currentLocation || 'A1-02'} — Bạn đang quét tip (Mã vật tư ^^00^^ Lô)` 
+               : `Vị trí: ${currentLocation || 'A1-02'} — Đưa camera vào tem QR vật tư`)
             : 'Đưa camera vào tem mã vị trí kệ kho'
         }
         samples={

@@ -6,11 +6,12 @@
 export interface AppUrlParams {
   userId: string;
   warehouseCode: string;
+  type: string;
 }
 
 export function getAppUrlParams(): AppUrlParams {
   if (typeof window === 'undefined') {
-    return { userId: '105', warehouseCode: 'FGW' };
+    return { userId: '105', warehouseCode: 'FGW', type: 'normal' };
   }
 
   try {
@@ -31,13 +32,16 @@ export function getAppUrlParams(): AppUrlParams {
       searchParams.get('warehouse_code') ||
       searchParams.get('warehouse') ||
       'FGW';
+      
+    const type = searchParams.get('type') || 'normal';
 
     return {
       userId: userId.trim() || '105',
       warehouseCode: warehouseCode.trim() || 'FGW',
+      type: type.trim() || 'normal',
     };
   } catch (e) {
     console.error('Error parsing URL parameters:', e);
-    return { userId: '105', warehouseCode: 'FGW' };
+    return { userId: '105', warehouseCode: 'FGW', type: 'normal' };
   }
 }
