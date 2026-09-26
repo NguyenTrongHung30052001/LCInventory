@@ -84,34 +84,40 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
   let missingFields: string[] = [];
   let errorReason: string | undefined;
 
+  // 1. Determine the delimiter globally
+  if (cleanInput.includes('^^')) {
+    delimiterUsed = '^^';
+    parts = cleanInput.split('^^').map((s) => s.trim());
+  } else if (cleanInput.includes('-')) {
+    delimiterUsed = '-';
+    parts = cleanInput.split('-').map((s) => s.trim());
+  } else if (cleanInput.includes('|')) {
+    delimiterUsed = '|';
+    parts = cleanInput.split('|').map((s) => s.trim());
+  } else {
+    parts = [cleanInput];
+  }
+
   let isTipMode = type === 'tip';
   let isFourPartsMode = false;
 
-  if (!isTipMode && cleanInput.includes('^^')) {
-    const autoParts = cleanInput.split('^^').map((s) => s.trim());
-    if (autoParts.length === 3) {
+  // Auto-detect if not explicitly requested
+  if (!isTipMode) {
+    if (parts.length === 3) {
       isTipMode = true;
-    } else if (autoParts.length === 4) {
+    } else if (parts.length === 4) {
       isFourPartsMode = true;
     }
   }
 
   if (isTipMode) {
-    // Tip logic: format is "mã vật tư ^^ phần_tử_thứ_2 ^^ lô sản xuất"
-    if (cleanInput.includes('^^')) {
-      delimiterUsed = '^^';
-      parts = cleanInput.split('^^').map((s) => s.trim());
-    } else {
-      parts = [cleanInput];
-    }
-    
     materialCode = parts[0] || '';
     batchNumber = parts[2] || '';
     
     isValid = parts.length >= 3 && Boolean(materialCode);
     if (!isValid) {
       if (parts.length < 3) {
-        errorReason = "Mã QR tip không đủ 3 phần (yêu cầu phân tách bằng '^^').";
+        errorReason = `Mã QR Tip không đủ 3 phần (đang có ${parts.length} phần).`;
         missingFields = ['Lô sản xuất'];
       }
       if (!materialCode) {
@@ -120,13 +126,6 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
       }
     }
   } else if (isFourPartsMode) {
-    if (cleanInput.includes('^^')) {
-      delimiterUsed = '^^';
-      parts = cleanInput.split('^^').map((s) => s.trim());
-    } else {
-      parts = [cleanInput];
-    }
-    
     // Phần tử thứ 2 (index 1) là mã vật tư, thứ 3 là màu, thứ 4 là lô
     materialCode = parts[1] || '';
     color = parts[2] || '';
@@ -135,7 +134,7 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     isValid = parts.length >= 4 && Boolean(materialCode);
     if (!isValid) {
       if (parts.length < 4) {
-        errorReason = "Mã QR loại 4 phần không đủ 4 phần (yêu cầu phân tách bằng '^^').";
+        errorReason = `Mã QR loại 4 phần không đủ 4 phần (đang có ${parts.length} phần).`;
         missingFields = ['Lô sản xuất'];
       }
       if (!materialCode) {
@@ -145,31 +144,25 @@ export function parseMaterialQr(input: string, type: 'normal' | 'tip' = 'normal'
     }
   } else {
     // Normal logic
-    // 1. Ưu tiên kiểm tra dấu "^^" trước
-    if (cleanInput.includes('^^')) {
-      delimiterUsed = '^^';
-      parts = cleanInput.split('^^').map((s) => s.trim());
-    } 
-    // 2. Nếu không có thì kiểm tra dấu "-"
-    else if (cleanInput.includes('-')) {
-      delimiterUsed = '-';
-      parts = cleanInput.split('-').map((s) => s.trim());
-    } 
-    // 3. Dự phòng cho dấu "|"
-    else if (cleanInput.includes('|')) {
-      delimiterUsed = '|';
-      parts = cleanInput.split('|').map((s) => s.trim());
-    } else {
-      // Single value or fallback
-      parts = [cleanInput];
-    }
-
     materialCode = parts[0] || '';
     color = parts[1] || '';
     size = parts[2] || '';
     length = parts[3] || '';
     productionOrder = parts[4] || '';
     batchNumber = parts[5] || '';
+
+    // Liên Châu yêu cầu đủ 6 phần tử phân tách.
+    isValid = parts.length >= 6;
+  
+    if (!isValid) {
+      if (parts.length < 6) missingFields.push('Lô sản xuất');
+      if (parts.length < 5) missingFields.push('Lệnh sản xuất (PO)');
+      if (parts.length < 4) missingFields.push('Chiều dài (Length)');
+      if (parts.length < 3) missingFields.push('Kích cỡ (Size)');
+      if (parts.length < 2) missingFields.push('Màu sắc');
+      
+      errorReason = `Mã QR chỉ nhận diện được ${parts.length}/6 trường thông tin. Còn thiếu: ${missingFields.join(', ')}.`;
+    }
   }
 
   let detectedUnit: 'MET' | 'KG' | 'PCS' | 'PAIR' | undefined;
